@@ -1,6 +1,6 @@
 # FileWise - AI-Powered File Search Application
 
-A Windows desktop application built with C# WPF that enables semantic file search using local AI models via Ollama. FileWise indexes your local files and allows you to query them using natural language.
+A Windows desktop application built with C# WPF that enables semantic file search using either Google Gemini (API key) or local AI models via Ollama. FileWise indexes your local files and allows you to query them using natural language.
 
 ## Features
 
@@ -11,9 +11,9 @@ A Windows desktop application built with C# WPF that enables semantic file searc
   - `.xlsx` files (using DocumentFormat.OpenXml)
   - `.csv` files
 
-- **Vector Search**: Uses local embedding models (via Ollama) to create semantic embeddings and performs cosine similarity search for fast file retrieval
+- **Vector Search**: Uses embedding models (local via Ollama or Gemini cloud) to create semantic embeddings and performs cosine similarity search for fast file retrieval
 
-- **AI Chatbot**: Powered by local LLM models (via Ollama) for natural language understanding and intelligent responses
+- **AI Chatbot**: Choose between Gemini (API key) or local Ollama models for natural language understanding and intelligent responses
 
 - **Local Database**: SQLite database stores file metadata and embeddings locally
 
@@ -25,16 +25,17 @@ A Windows desktop application built with C# WPF that enables semantic file searc
 
 - .NET 8 SDK
 - Windows OS
-- **Ollama** installed and running (download from https://ollama.ai)
-  - Ollama must be running on `http://localhost:11434`
-  - Recommended models:
-    - For embeddings: `nomic-embed-text` (run: `ollama pull nomic-embed-text`)
-    - For text generation: `llama2`, `mistral`, or `llama3` (run: `ollama pull llama2`)
-- **Optional**: Gemini API key for cloud-based features
-  - Required if you want to use Gemini cloud API instead of local Ollama models
-  - Required for PDF text extraction fallback when OCR is unavailable
-  - Get your API key from https://aistudio.google.com/app/apikey
-  - **Important**: You must enter your own API key in the Settings window - no API key is included with the application
+- **Choose one of the following AI backends:**
+  - **Option 1: Ollama (Local)** - Recommended for privacy and offline use
+    - Install Ollama from https://ollama.ai
+    - Ollama must be running on `http://localhost:11434`
+    - Recommended models:
+      - For embeddings: `nomic-embed-text` (run: `ollama pull nomic-embed-text`)
+      - For text generation: `llama2`, `mistral`, or `llama3` (run: `ollama pull llama2`)
+  - **Option 2: Gemini API (Cloud)** - Requires internet connection
+    - Get your API key from https://aistudio.google.com/app/apikey
+    - **Important**: You must enter your own API key in the Settings window - no API key is included with the application
+    - Required for PDF text extraction fallback when OCR is unavailable
 - **Optional**: `pdfium.dll` for OCR processing of scanned PDFs
   - **Quick Start**: See [QUICK_START_PDFIUM.md](QUICK_START_PDFIUM.md) to download pre-built version
   - **Build from Source**: See [PDFIUM_BUILD.md](PDFIUM_BUILD.md) for detailed instructions
@@ -42,43 +43,46 @@ A Windows desktop application built with C# WPF that enables semantic file searc
 
 ## Setup
 
-1. **Install Ollama**:
-   - Download and install Ollama from https://ollama.ai
+1. **Clone or download this repository**
+
+2. **Choose and configure your AI backend:**
+
+   **Option A: Using Ollama (Local - Recommended)**
+   - Install Ollama from https://ollama.ai
    - Start Ollama service (it should run automatically after installation)
+   - Pull required models:
+     ```bash
+     ollama pull nomic-embed-text
+     ollama pull llama2
+     ```
+     (You can use other models - just update `appsettings.json` accordingly)
+   - In Settings, select "Use Localhost (Local Model)" mode
+   - No API key required
 
-2. **Pull Required Models**:
-   ```bash
-   ollama pull nomic-embed-text
-   ollama pull llama2
-   ```
-   (You can use other models - just update `appsettings.json` accordingly)
-
-3. **Clone or download this repository**
-
-4. **Configure API Key** (if using Gemini cloud features):
-   - Run the application
-   - Open Settings (from the application menu)
+   **Option B: Using Gemini API (Cloud)**
+   - Get your API key from https://aistudio.google.com/app/apikey
+   - Run the application and open Settings
    - Select "Use API Key (Gemini Cloud)" mode
-   - Enter your Gemini API key (get it from https://aistudio.google.com/app/apikey)
+   - Enter your Gemini API key
    - Click "Save API Settings"
    - **Note**: No API key is included with the application - you must provide your own
 
-5. **Configure Models** (optional):
+3. **Configure Models** (optional, only if using Ollama):
    - Open `appsettings.json`
    - Adjust `TextModel` and `EmbeddingModel` if you're using different models
    - Default models are `llama2` and `nomic-embed-text`
 
-6. **Restore NuGet packages**:
+4. **Restore NuGet packages**:
    ```bash
    dotnet restore
    ```
 
-7. **Build the application**:
+5. **Build the application**:
    ```bash
    dotnet build
    ```
 
-8. **Run the application**:
+6. **Run the application**:
    ```bash
    dotnet run
    ```
@@ -144,7 +148,7 @@ You can also edit `appsettings.json` directly:
 - **PdfPig**: PDF text extraction (text-based PDFs)
 - **Tesseract OCR**: OCR for scanned/image-based PDFs (requires `pdfium.dll`)
 - **PdfiumViewer**: PDF rendering for OCR processing
-- **Gemini API**: Fallback PDF text extraction when OCR is unavailable
+- **Gemini API**: Cloud-based embeddings/text generation and PDF fallback when OCR is unavailable
 - **DocumentFormat.OpenXml**: Office document processing
 - **Ollama**: Local AI model server for embeddings and text generation
 
@@ -153,12 +157,14 @@ You can also edit `appsettings.json` directly:
 - The application creates a local SQLite database (`filewise.db`) in the application directory
 - Files are only re-indexed if their content hash changes
 - Embeddings are generated for text chunks (default: 1000 characters)
-- All AI processing happens locally via Ollama - no internet required after models are downloaded
-- First-time embedding generation may be slower as models load into memory
+- When using Ollama: All AI processing happens locally - no internet required after models are downloaded
+- When using Gemini: Internet connection required for AI processing
+- First-time embedding generation may be slower as models load into memory (Ollama only)
 
 ## Troubleshooting
 
-- **Connection Error**: Make sure Ollama is running (`ollama serve` or check if it's running as a service)
+- **Connection Error (Ollama)**: Make sure Ollama is running (`ollama serve` or check if it's running as a service)
+- **Connection Error (Gemini)**: Check your internet connection and verify your API key is correct
 - **Model Not Found**: Ensure you've pulled the required models (`ollama pull <model-name>`)
 - **File Not Indexed**: Check the console output for errors. Some files may fail to extract text
 - **Slow Processing**: Local models can be slower than cloud APIs. Consider using smaller/faster models or reducing `MaxConcurrentFiles` in `appsettings.json`
