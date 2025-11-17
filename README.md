@@ -1,6 +1,6 @@
 # FileWise - AI-Powered File Search Application
 
-A Windows desktop application built with C# WPF that enables semantic file search using either Google Gemini (API key) or local AI models via Ollama. FileWise indexes your local files and allows you to query them using natural language.
+A Windows desktop application built with C# WPF that enables semantic file search using local AI models via Ollama. FileWise indexes your local files and allows you to query them using natural language.
 
 ## Features
 
@@ -11,31 +11,30 @@ A Windows desktop application built with C# WPF that enables semantic file searc
   - `.xlsx` files (using DocumentFormat.OpenXml)
   - `.csv` files
 
-- **Vector Search**: Uses embedding models (local via Ollama or Gemini cloud) to create semantic embeddings and performs cosine similarity search for fast file retrieval
+- **Vector Search**: Uses local embedding models (via Ollama) to create semantic embeddings and performs cosine similarity search for fast file retrieval
 
-- **AI Chatbot**: Choose between Gemini (API key) or local Ollama models for natural language understanding and intelligent responses; seamless error handling keeps matched files visible even if the AI call fails
+- **AI Chatbot**: Powered by local LLM models (via Ollama) for natural language understanding and intelligent responses
 
-- **Local Database**: SQLite database stores file metadata, embeddings, and encrypted-file metadata locally
+- **Local Database**: SQLite database stores file metadata and embeddings locally
 
 - **Async Operations**: All file processing and API calls are asynchronous to keep the UI responsive
 
-- **Progress Tracking & Selection Mode**: Real-time indexing status plus selectable file cards/list rows so you can re-index only the files you choose
-
-- **Themeable UI**: Light, dark, and system-aware themes with minimalist white/blue palette; chat, settings, and chrome adopt the selected theme
-
-- **Modern UX**: Responsive chat bubbles, deduplicated file results, minimal title bar icons, and a consolidated settings window (singleton)
+- **Progress Tracking**: Real-time progress updates during file indexing
 
 ## Prerequisites
 
 - .NET 8 SDK
 - Windows OS
-- **Gemini API key** (if using the hosted option) from https://ai.google.dev/
-
-- **Ollama** installed and running (download from https://ollama.ai) if you prefer the local model workflow
+- **Ollama** installed and running (download from https://ollama.ai)
   - Ollama must be running on `http://localhost:11434`
   - Recommended models:
     - For embeddings: `nomic-embed-text` (run: `ollama pull nomic-embed-text`)
     - For text generation: `llama2`, `mistral`, or `llama3` (run: `ollama pull llama2`)
+- **Optional**: Gemini API key for cloud-based features
+  - Required if you want to use Gemini cloud API instead of local Ollama models
+  - Required for PDF text extraction fallback when OCR is unavailable
+  - Get your API key from https://aistudio.google.com/app/apikey
+  - **Important**: You must enter your own API key in the Settings window - no API key is included with the application
 - **Optional**: `pdfium.dll` for OCR processing of scanned PDFs
   - **Quick Start**: See [QUICK_START_PDFIUM.md](QUICK_START_PDFIUM.md) to download pre-built version
   - **Build from Source**: See [PDFIUM_BUILD.md](PDFIUM_BUILD.md) for detailed instructions
@@ -56,24 +55,30 @@ A Windows desktop application built with C# WPF that enables semantic file searc
 
 3. **Clone or download this repository**
 
-4. **Configure AI Backend & Models**:
-   - Open `appsettings.json`
-   - Set `Gemini:ApiKey` to your key if you want to use Gemini
-   - Toggle `Gemini:UseLocalhost` to `true` to use Ollama; update `Gemini:LocalhostUrl` if Ollama runs on another host/port
-   - Adjust `TextModel` and `EmbeddingModel` if you're using different Ollama models (defaults: `llama2`, `nomic-embed-text`)
-   - Optionally set `Appearance:Theme` to `Light`, `Dark`, or `System`
+4. **Configure API Key** (if using Gemini cloud features):
+   - Run the application
+   - Open Settings (from the application menu)
+   - Select "Use API Key (Gemini Cloud)" mode
+   - Enter your Gemini API key (get it from https://aistudio.google.com/app/apikey)
+   - Click "Save API Settings"
+   - **Note**: No API key is included with the application - you must provide your own
 
-5. **Restore NuGet packages**:
+5. **Configure Models** (optional):
+   - Open `appsettings.json`
+   - Adjust `TextModel` and `EmbeddingModel` if you're using different models
+   - Default models are `llama2` and `nomic-embed-text`
+
+6. **Restore NuGet packages**:
    ```bash
    dotnet restore
    ```
 
-6. **Build the application**:
+7. **Build the application**:
    ```bash
    dotnet build
    ```
 
-7. **Run the application**:
+8. **Run the application**:
    ```bash
    dotnet run
    ```
@@ -109,16 +114,26 @@ FileWise/
 
 ## Configuration
 
-Edit `appsettings.json` to customize:
+### Using the Settings Window (Recommended)
 
-- **Gemini/Ollama selection**:
-  - `Gemini:ApiKey`: Required when `Gemini:UseLocalhost` is `false`
-  - `Gemini:UseLocalhost`: `false` = Gemini cloud, `true` = local Ollama
-  - `Gemini:LocalhostUrl`: Base URL for Ollama (default `http://localhost:11434`)
-- **LocalModel**: When using Ollama, update `TextModel` and `EmbeddingModel`
-- **Appearance**: `Appearance:Theme` with values `Light`, `Dark`, or `System`
+The easiest way to configure FileWise is through the Settings window in the application:
+
+- **API Configuration**: Choose between Gemini cloud API or local Ollama models
+  - **API Key Mode**: Enter your Gemini API key (get it from https://aistudio.google.com/app/apikey)
+  - **Localhost Mode**: Use local Ollama models (default)
+- **Appearance**: Choose Light, Dark, or System theme
+- **Indexing**: Configure chunk size and concurrent file processing limits
+
+### Manual Configuration (Advanced)
+
+You can also edit `appsettings.json` directly:
+
+- **Gemini**: API key configuration
+  - `ApiKey`: Your Gemini API key (leave empty if using localhost mode)
+  - `UseLocalhost`: Set to `"true"` to use local Ollama models, `"false"` for Gemini cloud
+  - `LocalhostUrl`: URL for local model server (default: `http://localhost:11434`)
 - **Database**: SQLite connection string
-- **Indexing**: Chunk size, concurrent file processing, encrypted file handling
+- **Indexing**: Chunk size and concurrent file processing limits
 
 ## Technologies Used
 
@@ -129,7 +144,7 @@ Edit `appsettings.json` to customize:
 - **PdfPig**: PDF text extraction (text-based PDFs)
 - **Tesseract OCR**: OCR for scanned/image-based PDFs (requires `pdfium.dll`)
 - **PdfiumViewer**: PDF rendering for OCR processing
-- **Gemini API**: Hosted embeddings/text generation and PDF fallback when OCR is unavailable
+- **Gemini API**: Fallback PDF text extraction when OCR is unavailable
 - **DocumentFormat.OpenXml**: Office document processing
 - **Ollama**: Local AI model server for embeddings and text generation
 
@@ -147,14 +162,18 @@ Edit `appsettings.json` to customize:
 - **Model Not Found**: Ensure you've pulled the required models (`ollama pull <model-name>`)
 - **File Not Indexed**: Check the console output for errors. Some files may fail to extract text
 - **Slow Processing**: Local models can be slower than cloud APIs. Consider using smaller/faster models or reducing `MaxConcurrentFiles` in `appsettings.json`
-- **Port Issues**: If Ollama is running on a different port, update `Gemini:LocalhostUrl` in `appsettings.json`
+- **Port Issues**: If Ollama is running on a different port, update `BaseUrl` in `appsettings.json`
 - **PDF OCR Not Working**: 
   - If you see "Unable to load DLL 'pdfium.dll'", see [PDFIUM_BUILD.md](PDFIUM_BUILD.md) for build instructions
   - The application will automatically fall back to Gemini API if `pdfium.dll` is not available
-  - Ensure Gemini API key is configured in `appsettings.json` for fallback to work
+  - Ensure Gemini API key is configured in Settings for fallback to work
 - **Scanned PDFs Not Extracting Text**: 
   - Install `pdfium.dll` for local OCR (see [PDFIUM_BUILD.md](PDFIUM_BUILD.md))
-  - Or ensure Gemini API key is configured for cloud-based extraction
+  - Or configure your Gemini API key in Settings for cloud-based extraction
+- **API Key Issues**:
+  - Make sure you've entered your own Gemini API key in Settings (no API key is included with the application)
+  - Get your API key from https://aistudio.google.com/app/apikey
+  - If using localhost mode, you don't need a Gemini API key
 
 ## License
 

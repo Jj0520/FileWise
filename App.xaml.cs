@@ -56,7 +56,7 @@ public partial class App : Application
                     { "Indexing:ChunkSize", "1000" },
                     { "Indexing:MaxConcurrentFiles", "50" },
                     { "Indexing:MaxConcurrentPdfs", "20" },
-                    { "Gemini:ApiKey", "AIzaSyCxDJQYfBIuQ7hiQlLko90Ey6eacHgb9V0" },
+                    { "Gemini:ApiKey", "" },
                     { "Appearance:Theme", "System" }
                 })
                 .Build();
