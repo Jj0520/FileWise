@@ -1,6 +1,6 @@
 # FileWise - AI-Powered File Search Application
 
-A Windows desktop application built with C# WPF that enables semantic file search using local AI models via Ollama. FileWise indexes your local files and allows you to query them using natural language.
+A Windows desktop application built with C# WPF that enables semantic file search using either Google Gemini (API key) or local AI models via Ollama. FileWise indexes your local files and allows you to query them using natural language.
 
 ## Features
 
@@ -11,21 +11,27 @@ A Windows desktop application built with C# WPF that enables semantic file searc
   - `.xlsx` files (using DocumentFormat.OpenXml)
   - `.csv` files
 
-- **Vector Search**: Uses local embedding models (via Ollama) to create semantic embeddings and performs cosine similarity search for fast file retrieval
+- **Vector Search**: Uses embedding models (local via Ollama or Gemini cloud) to create semantic embeddings and performs cosine similarity search for fast file retrieval
 
-- **AI Chatbot**: Powered by local LLM models (via Ollama) for natural language understanding and intelligent responses
+- **AI Chatbot**: Choose between Gemini (API key) or local Ollama models for natural language understanding and intelligent responses; seamless error handling keeps matched files visible even if the AI call fails
 
-- **Local Database**: SQLite database stores file metadata and embeddings locally
+- **Local Database**: SQLite database stores file metadata, embeddings, and encrypted-file metadata locally
 
 - **Async Operations**: All file processing and API calls are asynchronous to keep the UI responsive
 
-- **Progress Tracking**: Real-time progress updates during file indexing
+- **Progress Tracking & Selection Mode**: Real-time indexing status plus selectable file cards/list rows so you can re-index only the files you choose
+
+- **Themeable UI**: Light, dark, and system-aware themes with minimalist white/blue palette; chat, settings, and chrome adopt the selected theme
+
+- **Modern UX**: Responsive chat bubbles, deduplicated file results, minimal title bar icons, and a consolidated settings window (singleton)
 
 ## Prerequisites
 
 - .NET 8 SDK
 - Windows OS
-- **Ollama** installed and running (download from https://ollama.ai)
+- **Gemini API key** (if using the hosted option) from https://ai.google.dev/
+
+- **Ollama** installed and running (download from https://ollama.ai) if you prefer the local model workflow
   - Ollama must be running on `http://localhost:11434`
   - Recommended models:
     - For embeddings: `nomic-embed-text` (run: `ollama pull nomic-embed-text`)
@@ -50,10 +56,12 @@ A Windows desktop application built with C# WPF that enables semantic file searc
 
 3. **Clone or download this repository**
 
-4. **Configure Models** (optional):
+4. **Configure AI Backend & Models**:
    - Open `appsettings.json`
-   - Adjust `TextModel` and `EmbeddingModel` if you're using different models
-   - Default models are `llama2` and `nomic-embed-text`
+   - Set `Gemini:ApiKey` to your key if you want to use Gemini
+   - Toggle `Gemini:UseLocalhost` to `true` to use Ollama; update `Gemini:LocalhostUrl` if Ollama runs on another host/port
+   - Adjust `TextModel` and `EmbeddingModel` if you're using different Ollama models (defaults: `llama2`, `nomic-embed-text`)
+   - Optionally set `Appearance:Theme` to `Light`, `Dark`, or `System`
 
 5. **Restore NuGet packages**:
    ```bash
@@ -103,12 +111,14 @@ FileWise/
 
 Edit `appsettings.json` to customize:
 
-- **LocalModel**: Ollama base URL and model names
-  - `BaseUrl`: Default is `http://localhost:11434`
-  - `TextModel`: Text generation model (default: `llama2`)
-  - `EmbeddingModel`: Embedding model (default: `nomic-embed-text`)
+- **Gemini/Ollama selection**:
+  - `Gemini:ApiKey`: Required when `Gemini:UseLocalhost` is `false`
+  - `Gemini:UseLocalhost`: `false` = Gemini cloud, `true` = local Ollama
+  - `Gemini:LocalhostUrl`: Base URL for Ollama (default `http://localhost:11434`)
+- **LocalModel**: When using Ollama, update `TextModel` and `EmbeddingModel`
+- **Appearance**: `Appearance:Theme` with values `Light`, `Dark`, or `System`
 - **Database**: SQLite connection string
-- **Indexing**: Chunk size and concurrent file processing limits
+- **Indexing**: Chunk size, concurrent file processing, encrypted file handling
 
 ## Technologies Used
 
@@ -119,7 +129,7 @@ Edit `appsettings.json` to customize:
 - **PdfPig**: PDF text extraction (text-based PDFs)
 - **Tesseract OCR**: OCR for scanned/image-based PDFs (requires `pdfium.dll`)
 - **PdfiumViewer**: PDF rendering for OCR processing
-- **Gemini API**: Fallback PDF text extraction when OCR is unavailable
+- **Gemini API**: Hosted embeddings/text generation and PDF fallback when OCR is unavailable
 - **DocumentFormat.OpenXml**: Office document processing
 - **Ollama**: Local AI model server for embeddings and text generation
 
@@ -137,7 +147,7 @@ Edit `appsettings.json` to customize:
 - **Model Not Found**: Ensure you've pulled the required models (`ollama pull <model-name>`)
 - **File Not Indexed**: Check the console output for errors. Some files may fail to extract text
 - **Slow Processing**: Local models can be slower than cloud APIs. Consider using smaller/faster models or reducing `MaxConcurrentFiles` in `appsettings.json`
-- **Port Issues**: If Ollama is running on a different port, update `BaseUrl` in `appsettings.json`
+- **Port Issues**: If Ollama is running on a different port, update `Gemini:LocalhostUrl` in `appsettings.json`
 - **PDF OCR Not Working**: 
   - If you see "Unable to load DLL 'pdfium.dll'", see [PDFIUM_BUILD.md](PDFIUM_BUILD.md) for build instructions
   - The application will automatically fall back to Gemini API if `pdfium.dll` is not available
