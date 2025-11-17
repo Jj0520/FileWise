@@ -1,0 +1,1192 @@
+<Window x:Class="FileWise.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:FileWise.ViewModels"
+        xmlns:utils="clr-namespace:FileWise.Utilities"
+        mc:Ignorable="d"
+        Title="FileWise" Height="900" Width="1400"
+        MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/FileWise.png"
+        Background="Transparent"
+        ResizeMode="CanResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Foreground="{DynamicResource PrimaryTextBrush}">
+    <Window.Resources>
+        <utils:BooleanToInverseConverter x:Key="InverseBooleanConverter"/>
+        <utils:BooleanToColumnWidthConverter x:Key="BooleanToColumnWidthConverter"/>
+        <utils:IsSelectedFileConverter x:Key="IsSelectedFileConverter"/>
+        <utils:IsSelectedTabConverter x:Key="IsSelectedTabConverter"/>
+        <utils:UserMessageBackgroundConverter x:Key="UserMessageBackgroundConverter"/>
+        <utils:UserMessageAlignmentConverter x:Key="UserMessageAlignmentConverter"/>
+        <utils:UserMessageForegroundConverter x:Key="UserMessageForegroundConverter"/>
+        <utils:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <utils:ViewModeToVisibilityConverter x:Key="ViewModeToVisibilityConverter"/>
+        <utils:FileSizeConverter x:Key="FileSizeConverter"/>
+        <utils:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+        <utils:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <utils:EmptyStringToHeightConverter x:Key="EmptyStringToHeightConverter"/>
+        <utils:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
+        <utils:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        <utils:NewlineToLineBreakConverter x:Key="NewlineToLineBreakConverter"/>
+        <utils:TextToParagraphsConverter x:Key="TextToParagraphsConverter"/>
+        
+        <!-- Animation Resources -->
+        <Storyboard x:Key="SlideInAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                           From="450" To="0" Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                           From="0" To="1" Duration="0:0:0.25"/>
+        </Storyboard>
+        
+        <Storyboard x:Key="SlideOutAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                           From="0" To="450" Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                           From="1" To="0" Duration="0:0:0.25"/>
+        </Storyboard>
+        
+        <!-- Styles -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4,4,4,4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="SelectionCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid>
+                            <Border x:Name="Border"
+                                    CornerRadius="4"
+                                    Background="{DynamicResource CardBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"/>
+                            <Path x:Name="CheckMark"
+                                  Data="M 3 9 L 7 13 L 15 5"
+                                  Stroke="{DynamicResource AccentForegroundBrush}"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource DisabledTextBrush}"/>
+                                <Setter TargetName="CheckMark" Property="Stroke" Value="{DynamicResource DisabledTextBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4,4,4,4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Panel Left Open Icon Path -->
+        <Geometry x:Key="PanelLeftOpenIcon">M 3,3 L 21,3 L 21,21 L 3,21 Z M 9,3 L 9,21 M 14,9 L 17,12 L 14,15</Geometry>
+        
+        <!-- Brain Icon Path -->
+        <Geometry x:Key="BrainIcon">M 12,18 L 12,5 M 15,13 C 15,11.5 14,10 12,10 C 10,10 9,11.5 9,13 M 17.598,6.5 A 3,3 0 0,0 12,5 A 3,3 0 0,0 6.402,6.5 M 17.997,5.125 A 4,4 0 0,1 20.523,10.895 M 18,18 A 4,4 0 0,0 20,10.536 M 19.967,17.483 A 4,4 0 0,1 12,18 A 4,4 0 0,1 4.033,17.483 M 6,18 A 4,4 0 0,1 4,10.536 M 6.003,5.125 A 4,4 0 0,0 3.477,10.895</Geometry>
+        
+        <!-- Settings Icon Path -->
+        <Geometry x:Key="SettingsIcon">M 9.671,4.136 A 2.34,2.34 0 0,1 14.33,4.136 A 2.34,2.34 0 0,0 17.649,6.051 A 2.34,2.34 0 0,1 19.979,10.084 A 2.34,2.34 0 0,0 19.979,13.916 A 2.34,2.34 0 0,1 17.649,17.949 A 2.34,2.34 0 0,0 14.33,19.864 A 2.34,2.34 0 0,1 9.671,19.864 A 2.34,2.34 0 0,0 6.351,17.949 A 2.34,2.34 0 0,1 4.021,13.916 A 2.34,2.34 0 0,0 4.021,10.084 A 2.34,2.34 0 0,1 6.351,6.051 A 2.34,2.34 0 0,0 9.671,4.136 M 12,9 A 3,3 0 0,1 15,12 A 3,3 0 0,1 12,15 A 3,3 0 0,1 9,12 A 3,3 0 0,1 12,9</Geometry>
+        
+        <!-- Standard Windows Segoe MDL2 Assets Icons -->
+        <!-- Minimize: \uE921, Maximize: \uE922, Restore: \uE923, Close: \uE8BB -->
+        
+        <!-- Ellipsis Icon Path (three dots) -->
+        <Geometry x:Key="EllipsisIcon">M 4,12 A 1,1 0 1,1 6,12 A 1,1 0 1,1 4,12 M 11,12 A 1,1 0 1,1 13,12 A 1,1 0 1,1 11,12 M 18,12 A 1,1 0 1,1 20,12 A 1,1 0 1,1 18,12</Geometry>
+        
+        <!-- Send Icon Path -->
+        <Geometry x:Key="SendIcon">M 22,2 L 2,9 L 10.93,12.78 L 14.54,21.69 L 22,2 Z M 21.85,2.15 L 10.91,13.09</Geometry>
+        
+        <!-- Windows 11 Title Bar Button Styles -->
+        <Style x:Key="TitleBarButton" TargetType="Button">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderThickness="0">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource TitleBarButtonHoverBrush}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource TitleBarButtonPressedBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Windows 11 Close Button Style -->
+        <Style x:Key="TitleBarCloseButton" TargetType="Button" BasedOn="{StaticResource TitleBarButton}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CloseButtonHoverBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CloseButtonPressedBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Title Bar Control Button (for custom icons) -->
+        <Style x:Key="TitleBarControlButton" TargetType="Button" BasedOn="{StaticResource TitleBarButton}">
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+    </Window.Resources>
+    
+    <Border x:Name="WindowBorder" 
+            BorderBrush="Transparent" 
+            BorderThickness="0" 
+            CornerRadius="8,8,8,8"
+            Background="Transparent">
+        <Border x:Name="ContentClipBorder" 
+                ClipToBounds="False"
+                Background="{DynamicResource ContentBackgroundBrush}"
+                CornerRadius="8,8,8,8">
+            <Grid x:Name="MainContentGrid">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Custom Title Bar -->
+            <Border Grid.Row="0" 
+                    Background="{DynamicResource TitleBarBackgroundBrush}"
+                    CornerRadius="8,8,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                    MouseMove="TitleBar_MouseMove"
+                    MouseLeftButtonUp="TitleBar_MouseLeftButtonUp">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Left: App Icon -->
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                        <Image x:Name="AppIcon" 
+                               Source="pack://application:,,,/FileWise.png" 
+                               Width="16" 
+                               Height="16" 
+                               Margin="12,0,8,0"
+                               VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Center: Search Bar (truly centered) -->
+                    <Border x:Name="SearchBarBorder" 
+                            Grid.Column="1"
+                            VerticalAlignment="Center" 
+                            HorizontalAlignment="Center"
+                            Background="{DynamicResource CardBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="10,4"
+                            MinWidth="300"
+                            MaxWidth="500"
+                            Height="22">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" 
+                                       Text="Search" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,8,0"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"/>
+                            <TextBox Grid.Column="1" 
+                                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     VerticalContentAlignment="Center"
+                                     FontSize="11"
+                                     Padding="0"
+                                     Foreground="{DynamicResource PrimaryTextBrush}"
+                                     KeyDown="SearchTextBox_KeyDown">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="TextBox">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            BorderThickness="0">
+                                                        <ScrollViewer x:Name="PART_ContentHost" 
+                                                                      Margin="0"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Right: Custom Control Buttons + Window Control Buttons (Min, Max, Close) -->
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <!-- Toggle Left Panel -->
+                        <Button Style="{StaticResource TitleBarControlButton}" 
+                                Command="{Binding TogglePrimarySidebarCommand}"
+                                ToolTip="Toggle Primary Sidebar">
+                            <Path Data="{StaticResource PanelLeftOpenIcon}" 
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                                  StrokeThickness="1.4" 
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="Transparent"
+                                  Width="14" 
+                                  Height="14" 
+                                  Stretch="Uniform"/>
+                        </Button>
+                        
+                        <!-- Toggle AI Panel -->
+                        <Button Style="{StaticResource TitleBarControlButton}" 
+                                Command="{Binding ToggleChatPanelCommand}"
+                                ToolTip="Toggle AI Pane">
+                            <Path Data="{StaticResource BrainIcon}" 
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                                  StrokeThickness="1.4" 
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="Transparent"
+                                  Width="14" 
+                                  Height="14" 
+                                  Stretch="Uniform"/>
+                        </Button>
+                        
+                        <!-- Settings -->
+                        <Button Style="{StaticResource TitleBarControlButton}" 
+                                ToolTip="Settings"
+                                Click="SettingsButton_Click">
+                            <Path Data="{StaticResource SettingsIcon}" 
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                                  StrokeThickness="1.4" 
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="Transparent"
+                                  Width="14" 
+                                  Height="14" 
+                                  Stretch="Uniform"/>
+                        </Button>
+                        
+                        <!-- Minimize -->
+                        <Button Style="{StaticResource TitleBarButton}" 
+                                ToolTip="Minimize"
+                                Click="MinimizeButton_Click">
+                            <TextBlock Text="&#xE921;" 
+                                      FontFamily="Segoe MDL2 Assets" 
+                                      FontSize="10"/>
+                        </Button>
+                        
+                        <!-- Maximize/Restore -->
+                        <Button x:Name="MaximizeButton"
+                                Style="{StaticResource TitleBarButton}" 
+                                ToolTip="Maximize"
+                                Click="MaximizeButton_Click">
+                            <TextBlock x:Name="MaximizeIconText"
+                                      Text="&#xE922;" 
+                                      FontFamily="Segoe MDL2 Assets" 
+                                      FontSize="10"/>
+                        </Button>
+                        
+                        <!-- Close -->
+                        <Button Style="{StaticResource TitleBarCloseButton}" 
+                                ToolTip="Close"
+                                Click="CloseButton_Click">
+                            <TextBlock Text="&#xE8BB;" 
+                                      FontFamily="Segoe MDL2 Assets" 
+                                      FontSize="10"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        
+        <!-- Main Content -->
+        <Grid x:Name="ContentColumnsGrid" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding IsPrimarySidebarVisible, Converter={StaticResource BooleanToColumnWidthConverter}, ConverterParameter=280}" 
+                                  MinWidth="0" 
+                                  MaxWidth="600"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+                <ColumnDefinition Width="{Binding IsChatPanelOpen, Converter={StaticResource BooleanToColumnWidthConverter}, ConverterParameter=4}" 
+                                  MinWidth="0" 
+                                  MaxWidth="4"/>
+                <ColumnDefinition Width="{Binding IsChatPanelOpen, Converter={StaticResource BooleanToColumnWidthConverter}, ConverterParameter=450}" 
+                                  MinWidth="0" 
+                                  MaxWidth="800"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Sidebar - Folder Selection -->
+            <Border Grid.Column="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0"
+                    Visibility="{Binding IsPrimarySidebarVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <!-- Folder Selection Panel -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="Folder Selection" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        
+                        <TextBox Text="{Binding SelectedFolder, UpdateSourceTrigger=PropertyChanged}" 
+                                 IsReadOnly="True" Margin="0,0,0,12" Padding="8,6" 
+                                 Background="{DynamicResource CardBackgroundBrush}" 
+                                 BorderBrush="{DynamicResource BorderBrush}" 
+                                 BorderThickness="1"
+                                 Foreground="{DynamicResource PrimaryTextBrush}">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="TextBox">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="6,6,6,6">
+                                                        <ScrollViewer x:Name="PART_ContentHost" 
+                                                                      Margin="{TemplateBinding Padding}"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                        
+                        <Button Content="Select Folder" Command="{Binding SelectFolderCommand}" 
+                                Style="{StaticResource ModernButton}" Margin="0,0,0,15"/>
+                        
+                        <Border Height="6" 
+                                Background="{DynamicResource SurfaceBackgroundBrush}" 
+                                CornerRadius="3,3,3,3"
+                                ClipToBounds="True"
+                                Margin="0,0,0,8">
+                            <ProgressBar Value="{Binding IndexingProgress}" 
+                                         Height="6"
+                                         Background="Transparent" 
+                                         Foreground="{DynamicResource AccentBrush}" 
+                                         BorderThickness="0"/>
+                        </Border>
+                        <TextBlock Text="{Binding IndexingStatus}" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area - File Explorer -->
+        <Grid Grid.Column="1" Background="{DynamicResource ContentBackgroundBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Toolbar -->
+            <Border Grid.Row="0" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- View Mode Toggle -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Command="{Binding SwitchToIconsViewCommand}" 
+                                ToolTip="Icons View" Margin="0,0,4,0">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                        <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentViewMode}" Value="Icons">
+                                                <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            <TextBlock Text="📁" FontSize="16" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        </Button>
+                            <Button Command="{Binding SwitchToListViewCommand}" 
+                                ToolTip="List View" Margin="0,0,8,0">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                        <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentViewMode}" Value="List">
+                                                <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            <TextBlock Text="☰" FontSize="16" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        </Button>
+                        
+                        <!-- Select Button -->
+                        <Button Command="{Binding ToggleSelectionModeCommand}" 
+                                ToolTip="Select Files" Margin="8,0,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelectionMode}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="☑" FontSize="16" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        </Button>
+                        
+                        <!-- Reindex Button (only visible when files are selected) -->
+                        <Button Command="{Binding ReindexSelectedFilesCommand}" 
+                                ToolTip="Re-index Selected Files" 
+                                Margin="8,0,0,0"
+                                Visibility="{Binding SelectedFilesForReindex.Count, Converter={StaticResource CountToVisibilityConverter}}"
+                                Style="{StaticResource ModernButton}"
+                                Padding="8,4"
+                                FontSize="12">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔄" FontSize="14" Margin="0,0,4,0"/>
+                                <TextBlock Text="Re-index" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    
+                    <!-- Sort Options -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Name" Command="{Binding SortByNameCommand}" Style="{StaticResource IconButton}" 
+                                Padding="8,4" FontSize="12" Margin="4,0"/>
+                            <Button Content="Type" Command="{Binding SortByTypeCommand}" Style="{StaticResource IconButton}" 
+                                Padding="8,4" FontSize="12" Margin="4,0"/>
+                            <Button Content="Size" Command="{Binding SortBySizeCommand}" Style="{StaticResource IconButton}" 
+                                Padding="8,4" FontSize="12" Margin="4,0"/>
+                            <Button Content="Date" Command="{Binding SortByDateCommand}" Style="{StaticResource IconButton}" 
+                                Padding="8,4" FontSize="12" Margin="4,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- File Explorer View -->
+            <Grid Grid.Row="1">
+                <!-- Icons View -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                              Visibility="{Binding CurrentViewMode, Converter={StaticResource ViewModeToVisibilityConverter}, ConverterParameter=Icons}">
+                    <ItemsControl ItemsSource="{Binding FilesView}" Margin="20">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="120" Height="100" Margin="8" 
+                                        Background="Transparent" 
+                                        BorderBrush="{DynamicResource BorderBrush}" 
+                                        BorderThickness="1"
+                                            CornerRadius="4,4,4,4"
+                                        Cursor="Hand"
+                                            MouseLeftButtonDown="FileItem_MouseLeftButtonDown">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Effect">
+                                                <Setter.Value>
+                                                    <DropShadowEffect Color="{DynamicResource ShadowColor}" 
+                                                                      Opacity="0" 
+                                                                      BlurRadius="0" 
+                                                                      ShadowDepth="0"/>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                    <DataTrigger Value="True">
+                                                        <DataTrigger.Binding>
+                                                            <MultiBinding Converter="{StaticResource IsSelectedFileConverter}">
+                                                                <Binding Path="."/>
+                                                                <Binding Path="DataContext.SelectedFile" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                            </MultiBinding>
+                                                        </DataTrigger.Binding>
+                                                        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect Color="{DynamicResource AccentColor}" 
+                                                                                  Opacity="0.5" 
+                                                                                  BlurRadius="8" 
+                                                                                  ShadowDepth="2"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock Text="📄" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,4" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="{Binding FileName}" 
+                                                       TextWrapping="Wrap" 
+                                                       TextAlignment="Center" 
+                                                       FontSize="11"
+                                                       MaxWidth="100"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource PrimaryTextBrush}"
+                                                       HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Checkbox for reindex selection (only visible in selection mode) -->
+                                         <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" 
+                                                   Margin="4" 
+                                                   IsChecked="{Binding IsSelectedForReindex, Mode=TwoWay}"
+                                                   Click="FileReindexCheckBox_Click"
+                                                   Tag="{Binding}"
+                                                   ToolTip="Select for re-indexing"
+                                                   Background="{DynamicResource CardBackgroundBrush}"
+                                                  BorderBrush="{DynamicResource AccentBrush}"
+                                                  Foreground="{DynamicResource PrimaryTextBrush}"
+                                                   Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                
+                <!-- List View -->
+                <DataGrid ItemsSource="{Binding FilesView}" 
+                          SelectedItem="{Binding SelectedFile}"
+                          Visibility="{Binding CurrentViewMode, Converter={StaticResource ViewModeToVisibilityConverter}, ConverterParameter=List}"
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True" 
+                          GridLinesVisibility="None" 
+                          HeadersVisibility="Column"
+                          AlternatingRowBackground="{DynamicResource DataGridRowBackgroundBrush}"
+                          RowBackground="{DynamicResource DataGridRowBackgroundBrush}"
+                          Background="{DynamicResource CardBackgroundBrush}"
+                          BorderThickness="0"
+                          Foreground="{DynamicResource PrimaryTextBrush}"
+                          RowHeaderWidth="0"
+                          SelectionMode="Single"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                          MouseDoubleClick="DataGrid_MouseDoubleClick">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="{DynamicResource DataGridRowBackgroundBrush}"/>
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="{DynamicResource ShadowColor}" 
+                                                          Opacity="0" 
+                                                          BlurRadius="0" 
+                                                          ShadowDepth="0"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource DataGridRowSelectedBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource DataGridRowSelectedBorderBrush}"/>
+                                        <Setter Property="BorderThickness" Value="0,1"/>
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect Color="{DynamicResource AccentColor}" 
+                                                                  Opacity="0.4" 
+                                                                  BlurRadius="6" 
+                                                                  ShadowDepth="1"
+                                                                  Direction="270"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource DataGridRowHoverBrush}"/>
+                                    </Trigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsSelected" Value="True"/>
+                                            <Condition Property="IsMouseOver" Value="True"/>
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="Background" Value="{DynamicResource DataGridRowSelectedHoverBrush}"/>
+                                    </MultiTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <!-- Checkbox column for reindex selection (only visible in selection mode) -->
+                        <DataGridTemplateColumn Header="" Width="40">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelectedForReindex, Mode=TwoWay}"
+                                              Click="FileReindexCheckBox_Click"
+                                              Tag="{Binding}"
+                                              ToolTip="Select for re-indexing"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Style="{StaticResource SelectionCheckBoxStyle}"
+                                              Visibility="{Binding DataContext.IsSelectionMode, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="*" MinWidth="200">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Style>
+                            </DataGridTextColumn.HeaderStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Type" Binding="{Binding FileType}" Width="100">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Style>
+                            </DataGridTextColumn.HeaderStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Size" Binding="{Binding FileSize, Converter={StaticResource FileSizeConverter}}" Width="100">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Style>
+                            </DataGridTextColumn.HeaderStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="150">
+                            <DataGridTextColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Style>
+                            </DataGridTextColumn.HeaderStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+            
+        <!-- GridSplitter for resizing chat panel -->
+        <GridSplitter Grid.Column="2"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Width="4"
+                      Background="{DynamicResource SplitterBrush}"
+                      ResizeDirection="Columns"
+                      ShowsPreview="False"
+                      Visibility="{Binding IsChatPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            
+            <!-- Chat Panel - REBUILT FROM SCRATCH -->
+            <Border Grid.Column="3"
+                Background="{DynamicResource ChatPanelBackgroundBrush}" 
+                BorderBrush="{DynamicResource ChatPanelBorderBrush}" 
+                BorderThickness="1,0,0,0"
+                Visibility="{Binding IsChatPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                <!-- Chat Tabs Header -->
+                    <Border Grid.Row="0" Background="{DynamicResource AccentBrush}" Padding="0,0,0,0" CornerRadius="8,8,8,8" Margin="8,8,8,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Tabs -->
+                        <ScrollViewer Grid.Column="0" 
+                                      HorizontalScrollBarVisibility="Auto" 
+                                      VerticalScrollBarVisibility="Hidden"
+                                      Padding="8,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <ItemsControl ItemsSource="{Binding ChatTabs}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="6,6,6,6" Margin="4,4,4,4">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="Margin" Value="4,4,4,4"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Value="True">
+                                                                <DataTrigger.Binding>
+                                                                    <MultiBinding Converter="{StaticResource IsSelectedTabConverter}">
+                                                                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="DataContext.SelectedChatTab"/>
+                                                                        <Binding Path="."/>
+                                                                    </MultiBinding>
+                                                                </DataTrigger.Binding>
+                                                        <Setter Property="Background" Value="{DynamicResource DeepAccentBrush}"/>
+                                                                    <Setter Property="Margin" Value="4,4,4,4"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Button Command="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=DataContext.SelectTabCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Padding="12,10"
+                                                        Cursor="Hand">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button">
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border Background="{TemplateBinding Background}" 
+                                                                                CornerRadius="6,6,6,6"
+                                                                                Padding="{TemplateBinding Padding}">
+                                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="{DynamicResource DeepAccentBrush}"/>
+                                                                    <Setter Property="Opacity" Value="0.7"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <TextBlock Text="{Binding Title}" 
+                                                               Foreground="{DynamicResource TabTextBrush}" 
+                                                               FontSize="13"
+                                                               FontWeight="SemiBold"/>
+                                                </Button>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <!-- New Tab Button -->
+                                <Button Command="{Binding CreateNewTabCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="8,10"
+                                        Cursor="Hand"
+                                        ToolTip="New Chat"
+                                        Margin="4,0,0,0">
+                                    <TextBlock Text="+" 
+                                               Foreground="{DynamicResource TabTextBrush}" 
+                                               FontSize="18"
+                                               FontWeight="Bold"/>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
+                        
+                        <!-- Ellipsis Menu Button -->
+                        <Button Grid.Column="1" 
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="8,10"
+                                Cursor="Hand"
+                                ToolTip="Chat Options"
+                                x:Name="ChatOptionsButton"
+                                Click="ChatOptionsButton_Click">
+                            <Path Data="{StaticResource EllipsisIcon}" 
+                                  Stroke="{DynamicResource TabTextBrush}" 
+                                  StrokeThickness="2" 
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Width="16" 
+                                  Height="16"
+                                  Stretch="Uniform"/>
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <ContextMenu.Style>
+                                        <Style TargetType="ContextMenu">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ContextMenu">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6,6,6,6"
+                                                                Padding="4">
+                                                            <ItemsPresenter/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ContextMenu.Style>
+                                    <MenuItem Header="Clear All Chats" 
+                                              Command="{Binding ClearAllChatsCommand}"/>
+                                    <MenuItem Header="Delete This Tab" 
+                                              Command="{Binding DeleteTabCommand}"
+                                              CommandParameter="{Binding SelectedChatTab}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource DeepAccentBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        
+                        <!-- Close Button -->
+                        <Button Grid.Column="2" 
+                                Content="✕" 
+                                Foreground="{DynamicResource TabTextBrush}"
+                                Padding="12,10"
+                                Click="CloseChatPanel_Click"
+                                ToolTip="Close Chat"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource TitleBarButton}">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TabTextBrush}"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource DeepAccentBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                    </Border>
+                    
+                    <!-- Messages Area -->
+                    <ScrollViewer Grid.Row="1" 
+                                  VerticalScrollBarVisibility="Auto" 
+                                  Padding="20" 
+                                  x:Name="ChatScrollViewer" 
+                                  Background="{DynamicResource ChatScrollBackgroundBrush}">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding ChatMessages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,12,0,0">
+                                            <Border Padding="16,12" 
+                                                Background="{Binding IsUser, Converter={StaticResource UserMessageBackgroundConverter}}"
+                                                    CornerRadius="8"
+                                                    MaxWidth="500"
+                                                    HorizontalAlignment="{Binding IsUser, Converter={StaticResource UserMessageAlignmentConverter}}">
+                                            <StackPanel MaxWidth="468">
+                                                <ItemsControl ItemsSource="{Binding Content, Converter={StaticResource TextToParagraphsConverter}}"
+                                                              Margin="0,0,0,4">
+                                                    <ItemsControl.Resources>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="TextWrapping" Value="Wrap"/>
+                                                            <Setter Property="FontSize" Value="14"/>
+                                                            <Setter Property="Margin" Value="0,0,0,8"/>
+                                                            <Setter Property="LineHeight" Value="22"/>
+                                                            <Setter Property="Foreground" Value="{Binding IsUser, Converter={StaticResource UserMessageForegroundConverter}, RelativeSource={RelativeSource AncestorType=Border, AncestorLevel=2}}"/>
+                                                        </Style>
+                                                    </ItemsControl.Resources>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Height="{Binding Converter={StaticResource EmptyStringToHeightConverter}}"
+                                                                    Visibility="{Binding Converter={StaticResource EmptyStringToVisibilityConverter}}">
+                                                                <TextBlock Text="{Binding}" 
+                                                           TextWrapping="Wrap" 
+                                                                           MaxWidth="468"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                
+                                                <!-- Related Files Section -->
+                                                <ItemsControl ItemsSource="{Binding RelatedFiles}" 
+                                                              Margin="0,8,0,0"
+                                                              Visibility="{Binding RelatedFiles, Converter={StaticResource NullToVisibilityConverter}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{DynamicResource ChatLinkBackgroundBrush}" 
+                                                                    BorderBrush="{DynamicResource ChatLinkBorderBrush}" 
+                                                                    BorderThickness="1" 
+                                                                    CornerRadius="4" 
+                                                                    Padding="8,6" 
+                                                                    Margin="0,0,0,6"
+                                                                    Cursor="Hand"
+                                                                    MaxWidth="468"
+                                                                    MouseLeftButtonDown="RelatedFile_MouseLeftButtonDown">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="📄" 
+                                                       FontSize="14"
+                                                                               VerticalAlignment="Center" 
+                                                                               Margin="0,0,8,0"/>
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{Binding File.FileName}" 
+                                                                                   FontWeight="SemiBold" 
+                                                                                   FontSize="13"
+                                                                                   Foreground="{DynamicResource ChatLinkForegroundBrush}"
+                                                                                   TextWrapping="Wrap"/>
+                                                                        <TextBlock Text="{Binding File.FilePath}" 
+                                                                                   FontSize="11" 
+                                                                                   Foreground="{DynamicResource ChatFilePathForegroundBrush}"
+                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                   TextWrapping="Wrap"/>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                
+                                                <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" 
+                                                       FontSize="11" 
+                                                               Foreground="{Binding IsUser, Converter={StaticResource UserMessageForegroundConverter}}"
+                                                               Opacity="0.7"
+                                                               HorizontalAlignment="Right"
+                                                               Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <!-- Loading Indicator -->
+                        <StackPanel Orientation="Horizontal" 
+                                    Margin="0,12,0,0"
+                                    Visibility="{Binding IsProcessingQuery, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ChatProcessingTextBrush}" FontSize="14">
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                <!-- Cycle through: Thinking, Planning, Generating Response -->
+                                                <StringAnimationUsingKeyFrames Storyboard.TargetProperty="Text" Duration="0:0:4.5">
+                                                    <!-- Thinking phase -->
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:0" Value="Thinking"/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:0.5" Value="Thinking."/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:1" Value="Thinking.."/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:1.5" Value="Thinking..."/>
+                                                    
+                                                    <!-- Planning phase -->
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:1.5" Value="Planning"/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:2" Value="Planning."/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:2.5" Value="Planning.."/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:3" Value="Planning..."/>
+                                                    
+                                                    <!-- Generating Response phase -->
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:3" Value="Generating Response"/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:3.5" Value="Generating Response."/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:4" Value="Generating Response.."/>
+                                                    <DiscreteStringKeyFrame KeyTime="0:0:4.5" Value="Generating Response..."/>
+                                                        </StringAnimationUsingKeyFrames>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                    </TextBlock>
+                                </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                    
+                    <!-- Input Area -->
+                    <Border Grid.Row="2" 
+                            Background="{DynamicResource ChatPanelBackgroundBrush}" 
+                            BorderBrush="{DynamicResource BorderBrush}" 
+                            BorderThickness="0,1,0,0" 
+                            Padding="15">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" 
+                                     Text="{Binding UserQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                 Padding="8,6" 
+                                     FontSize="13"
+                                 Background="{DynamicResource ChatInputBackgroundBrush}" 
+                                     BorderBrush="{DynamicResource ChatInputBorderBrush}"
+                                     BorderThickness="1"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="TextBox_KeyDown"
+                                     AcceptsReturn="False"
+                                 Margin="0,0,10,0"
+                                 Foreground="{DynamicResource PrimaryTextBrush}">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="TextBox">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="6">
+                                                    <ScrollViewer x:Name="PART_ContentHost" 
+                                                                  Margin="{TemplateBinding Padding}"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <Button Grid.Column="1" 
+                                    Command="{Binding SendQueryCommand}" 
+                                    IsEnabled="{Binding IsProcessingQuery, Converter={StaticResource InverseBooleanConverter}}"
+                                    Background="{DynamicResource AccentBrush}"
+                                    Foreground="{DynamicResource AccentForegroundBrush}"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    Cursor="Hand"
+                                    ToolTip="Send">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="6"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                                <Path Data="{StaticResource SendIcon}" 
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                                      StrokeThickness="2" 
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      Width="18" 
+                                      Height="18" 
+                                      Stretch="Uniform"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+    </Border>
+    </Border>
+</Window>

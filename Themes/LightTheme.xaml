@@ -1,0 +1,69 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Color Resources -->
+    <Color x:Key="AccentColor">#FF5B9BD5</Color>
+    <Color x:Key="ShadowColor">#80000000</Color>
+    <Color x:Key="DeepAccentColor">#FF125488</Color>
+    
+    <!-- Brush Resources -->
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFFDFDFD"/>
+    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#FFE5E5E5"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#FFE0E0E0"/>
+    
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FF333333"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FF666666"/>
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#FF999999"/>
+    
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FF4A8BC5"/>
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="#FFADD9D8"/>
+    <SolidColorBrush x:Key="AccentSubtleAlternateBrush" Color="#FFBBDEFB"/>
+    <SolidColorBrush x:Key="DeepAccentBrush" Color="{StaticResource DeepAccentColor}"/>
+    
+    <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="TitleBarForegroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="TitleBarButtonHoverBrush" Color="#FFF3F3F3"/>
+    <SolidColorBrush x:Key="TitleBarButtonPressedBrush" Color="#FFE5E5E5"/>
+    <SolidColorBrush x:Key="CloseButtonHoverBrush" Color="#FFC42B1C"/>
+    <SolidColorBrush x:Key="CloseButtonPressedBrush" Color="#FFA02913"/>
+    
+    <SolidColorBrush x:Key="SplitterBrush" Color="#FFF0F0F0"/>
+    
+    <SolidColorBrush x:Key="ChatPanelBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ChatPanelBorderBrush" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="ChatScrollBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ChatInputBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ChatInputBorderBrush" Color="#FFF0F0F0"/>
+    <SolidColorBrush x:Key="ChatLinkBackgroundBrush" Color="#FFF0F8FF"/>
+    <SolidColorBrush x:Key="ChatLinkBorderBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="ChatLinkForegroundBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="ChatFilePathForegroundBrush" Color="#FF666666"/>
+    <SolidColorBrush x:Key="ChatTimestampBrush" Color="#FF666666"/>
+    <SolidColorBrush x:Key="ChatProcessingTextBrush" Color="#FF666666"/>
+    
+    <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#FF2A93D5"/>
+    <SolidColorBrush x:Key="ChatAiMessageBrush" Color="#FFF3F4F6"/>
+    <SolidColorBrush x:Key="ChatUserTextBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ChatAiTextBrush" Color="#FF1D1D1F"/>
+    
+    <SolidColorBrush x:Key="TabBackgroundBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="TabSelectedBrush" Color="{StaticResource DeepAccentColor}"/>
+    <SolidColorBrush x:Key="TabHoverBrush" Color="#66125488"/>
+    <SolidColorBrush x:Key="TabTextBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="TabActiveTextBrush" Color="#FFFFFFFF"/>
+    
+    <SolidColorBrush x:Key="DataGridRowBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="DataGridRowHoverBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="DataGridRowSelectedBrush" Color="#FFADD9D8"/>
+    <SolidColorBrush x:Key="DataGridRowSelectedBorderBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="DataGridRowSelectedHoverBrush" Color="#FFBBDEFB"/>
+    
+    <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="ConsoleForegroundBrush" Color="#FF00FF00"/>
+</ResourceDictionary>
+

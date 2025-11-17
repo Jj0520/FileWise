@@ -1,0 +1,69 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Color Resources -->
+    <Color x:Key="AccentColor">#FF5B9BD5</Color>
+    <Color x:Key="ShadowColor">#CC000000</Color>
+    <Color x:Key="DeepAccentColor">#FF0E3B64</Color>
+    
+    <!-- Brush Resources -->
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF1D222B"/>
+    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#FF242B36"/>
+    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#FF262F3A"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FF2C3744"/>
+    <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#FF343F4D"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#FF3F4B5A"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#FF475565"/>
+    
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFE8ECF3"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFC8CFDA"/>
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#FF8C94A3"/>
+    
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FF72B6EE"/>
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="#332A93D5"/>
+    <SolidColorBrush x:Key="AccentSubtleAlternateBrush" Color="#334E8ADB"/>
+    <SolidColorBrush x:Key="DeepAccentBrush" Color="{StaticResource DeepAccentColor}"/>
+    
+    <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#FF242B36"/>
+    <SolidColorBrush x:Key="TitleBarForegroundBrush" Color="#FFE8ECF3"/>
+    <SolidColorBrush x:Key="TitleBarButtonHoverBrush" Color="#FF303846"/>
+    <SolidColorBrush x:Key="TitleBarButtonPressedBrush" Color="#FF3A4454"/>
+    <SolidColorBrush x:Key="CloseButtonHoverBrush" Color="#FFC0422A"/>
+    <SolidColorBrush x:Key="CloseButtonPressedBrush" Color="#FF99351F"/>
+    
+    <SolidColorBrush x:Key="SplitterBrush" Color="#FF3A4653"/>
+    
+    <SolidColorBrush x:Key="ChatPanelBackgroundBrush" Color="#FF2C3440"/>
+    <SolidColorBrush x:Key="ChatPanelBorderBrush" Color="#FF3F4B5A"/>
+    <SolidColorBrush x:Key="ChatScrollBackgroundBrush" Color="#FF2C3440"/>
+    <SolidColorBrush x:Key="ChatInputBackgroundBrush" Color="#FF343F4D"/>
+    <SolidColorBrush x:Key="ChatInputBorderBrush" Color="#FF465364"/>
+    <SolidColorBrush x:Key="ChatLinkBackgroundBrush" Color="#1A4E7CB0"/>
+    <SolidColorBrush x:Key="ChatLinkBorderBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="ChatLinkForegroundBrush" Color="#FF9DD0FF"/>
+    <SolidColorBrush x:Key="ChatFilePathForegroundBrush" Color="#FFBFC8D6"/>
+    <SolidColorBrush x:Key="ChatTimestampBrush" Color="#FFAEB9C8"/>
+    <SolidColorBrush x:Key="ChatProcessingTextBrush" Color="#FFBFC8D6"/>
+    
+    <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#FF2A93D5"/>
+    <SolidColorBrush x:Key="ChatAiMessageBrush" Color="#FF343F4D"/>
+    <SolidColorBrush x:Key="ChatUserTextBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ChatAiTextBrush" Color="#FFF5F5F5"/>
+    
+    <SolidColorBrush x:Key="TabBackgroundBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="TabSelectedBrush" Color="{StaticResource DeepAccentColor}"/>
+    <SolidColorBrush x:Key="TabHoverBrush" Color="#66223860"/>
+    <SolidColorBrush x:Key="TabTextBrush" Color="#FFE8ECF3"/>
+    <SolidColorBrush x:Key="TabActiveTextBrush" Color="#FFFFFFFF"/>
+    
+    <SolidColorBrush x:Key="DataGridRowBackgroundBrush" Color="#FF2B333F"/>
+    <SolidColorBrush x:Key="DataGridRowHoverBrush" Color="#FF303947"/>
+    <SolidColorBrush x:Key="DataGridRowSelectedBrush" Color="#332F7AC2"/>
+    <SolidColorBrush x:Key="DataGridRowSelectedBorderBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="DataGridRowSelectedHoverBrush" Color="#334E8ADB"/>
+    
+    <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#FF141820"/>
+    <SolidColorBrush x:Key="ConsoleForegroundBrush" Color="#FF7CFFA1"/>
+</ResourceDictionary>
+
