@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace FileWise.Services;
@@ -52,6 +54,35 @@ public class UserSettingsService
         }
     }
 
+    public string Nickname
+    {
+        get => _settings.Nickname ?? string.Empty;
+        set
+        {
+            _settings.Nickname = value;
+            SaveSettings();
+        }
+    }
+
+    public bool EnableTraditionalChinese
+    {
+        get => _settings.EnableTraditionalChinese ?? false;
+        set
+        {
+            _settings.EnableTraditionalChinese = value;
+            SaveSettings();
+        }
+    }
+
+    public string UILanguage
+    {
+        get => _settings.UILanguage ?? "en-US";
+        set
+        {
+            _settings.UILanguage = value;
+            SaveSettings();
+        }
+    }
 
     private UserSettings LoadSettings()
     {
@@ -90,9 +121,45 @@ public class UserSettingsService
         }
     }
 
+    public List<string> RecentFolders
+    {
+        get => _settings.RecentFolders ?? new List<string>();
+        set
+        {
+            _settings.RecentFolders = value;
+            SaveSettings();
+        }
+    }
+
+    public void AddRecentFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return;
+
+        var recentFolders = RecentFolders.ToList();
+        
+        // Remove if already exists (to avoid duplicates)
+        recentFolders.Remove(folderPath);
+        
+        // Add to the beginning
+        recentFolders.Insert(0, folderPath);
+        
+        // Keep only the last 10
+        if (recentFolders.Count > 10)
+        {
+            recentFolders = recentFolders.Take(10).ToList();
+        }
+        
+        RecentFolders = recentFolders;
+    }
+
     private class UserSettings
     {
         public string? SelectedFolder { get; set; }
+        public string? Nickname { get; set; }
+        public bool? EnableTraditionalChinese { get; set; }
+        public string? UILanguage { get; set; }
+        public List<string>? RecentFolders { get; set; }
     }
 }
 

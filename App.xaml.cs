@@ -114,6 +114,10 @@ public partial class App : Application
         ConfigureServices(serviceCollection, configuration);
         _serviceProvider = serviceCollection.BuildServiceProvider();
 
+        // Initialize localization service with saved language
+        var userSettings = _serviceProvider.GetRequiredService<UserSettingsService>();
+        LocalizationService.Instance.SetLanguage(userSettings.UILanguage);
+
         // Initialize database
         var dbService = _serviceProvider.GetRequiredService<IDatabaseService>();
         dbService.InitializeAsync().Wait();
@@ -231,11 +235,19 @@ public partial class App : Application
         services.AddSingleton<UserSettingsService>();
         services.AddSingleton<ChatHistoryService>();
         services.AddSingleton<TextExtractorService>(sp => 
-            new TextExtractorService(configuration));
+        {
+            var userSettings = sp.GetRequiredService<UserSettingsService>();
+            return new TextExtractorService(configuration, userSettings);
+        });
         services.AddSingleton<IEmbeddingService, EmbeddingService>();
         services.AddSingleton<IVectorSearchService, VectorSearchService>();
         services.AddSingleton<IFileIndexerService, FileIndexerService>();
-        services.AddSingleton<IChatbotService, ChatbotService>();
+        services.AddSingleton<IChatbotService>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<ChatbotService>>();
+            var userSettings = sp.GetRequiredService<UserSettingsService>();
+            return new ChatbotService(configuration, logger, userSettings);
+        });
         
         // Note: TextExtractorService is already registered above, so it will be injected into MainViewModel
 

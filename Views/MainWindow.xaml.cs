@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Interop;
 using FileWise.Models;
+using FileWise.Services;
 using FileWise.ViewModels;
 using FileWise.Utilities;
 using FileWise.Views;
@@ -80,6 +81,12 @@ public partial class MainWindow : Window
             // Enable native Windows snap functionality
             SourceInitialized += MainWindow_SourceInitialized;
             
+            // Subscribe to language changes to update UI strings
+            LocalizationService.Instance.LanguageChanged += LocalizationService_LanguageChanged;
+            
+            // Initial UI strings update
+            UpdateUIStrings();
+            
             // Scroll chat to bottom when new messages are added
             if (viewModel != null)
             {
@@ -98,6 +105,29 @@ public partial class MainWindow : Window
                     }
                 };
                 
+                // Handle processing animation
+                viewModel.PropertyChanged += (s, e) =>
+                {
+                    try
+                    {
+                        if (e.PropertyName == nameof(MainViewModel.IsProcessingQuery))
+                        {
+                            if (viewModel.IsProcessingQuery)
+                            {
+                                UpdateProcessingAnimation();
+                            }
+                            else
+                            {
+                                StopProcessingAnimation();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error handling IsProcessingQuery change: {ex.Message}");
+                    }
+                };
+
                 // Update DataGrid layout when chat panel toggles
                 viewModel.PropertyChanged += (s, e) =>
                 {
@@ -107,6 +137,12 @@ public partial class MainWindow : Window
                         {
                             Dispatcher.BeginInvoke(new Action(() =>
                             {
+                                // Scroll to bottom when chat panel opens
+                                if (viewModel.IsChatPanelOpen && ChatScrollViewer != null)
+                                {
+                                    ChatScrollViewer.ScrollToEnd();
+                                }
+                                
                                 // Handle column widths based on IsChatPanelOpen to override GridSplitter modifications
                                 if (ContentColumnsGrid != null && ContentColumnsGrid.ColumnDefinitions.Count >= 4)
                                 {
@@ -651,6 +687,43 @@ public partial class MainWindow : Window
         }
     }
 
+    private void NetworkPath_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            if (sender is FrameworkElement element)
+            {
+                var path = element.Tag as string;
+                if (string.IsNullOrEmpty(path))
+                {
+                    // Try to get path from converter
+                    var textBlock = element.FindName("PathTextBlock") as System.Windows.Controls.TextBlock;
+                    if (textBlock != null)
+                    {
+                        path = textBlock.Text;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    // Open the network path as a folder in Windows Explorer
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"\"{path}\"",
+                        UseShellExecute = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in NetworkPath_MouseLeftButtonDown: {ex.Message}");
+            System.Windows.MessageBox.Show($"Error opening folder: {ex.Message}", "Error", 
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
     private void RelatedFile_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         try
@@ -774,6 +847,11 @@ public partial class MainWindow : Window
         Close();
     }
 
+    public void OpenSettingsWindow()
+    {
+        SettingsButton_Click(null, null);
+    }
+
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -893,11 +971,80 @@ public partial class MainWindow : Window
                 // Square corners when maximized
                 WindowBorder.CornerRadius = new CornerRadius(0);
                 WindowBorder.Clip = null;
+                if (ContentClipBorder != null)
+                {
+                    ContentClipBorder.CornerRadius = new CornerRadius(0);
+                    ContentClipBorder.Margin = new Thickness(0);
+                }
+                if (TitleBarBorder != null)
+                {
+                    TitleBarBorder.CornerRadius = new CornerRadius(0);
+                }
             }
             else
             {
-                // Rounded corners when not maximized
-                WindowBorder.CornerRadius = new CornerRadius(8);
+                // Check if window is snapped to left or right edge
+                var isSnappedLeft = IsWindowSnappedToLeft();
+                var isSnappedRight = IsWindowSnappedToRight();
+                
+                // Conditional corner radius based on snapping
+                // Snapped to left: remove left corners (top-left, bottom-left)
+                // Snapped to right: remove right corners (top-right, bottom-right)
+                // Not snapped: all corners rounded
+                CornerRadius cornerRadius;
+                if (isSnappedLeft)
+                {
+                    cornerRadius = new CornerRadius(0, 8, 0, 8); // No left corners
+                }
+                else if (isSnappedRight)
+                {
+                    cornerRadius = new CornerRadius(8, 0, 8, 0); // No right corners
+                }
+                else
+                {
+                    cornerRadius = new CornerRadius(8); // All corners rounded
+                }
+                
+                WindowBorder.CornerRadius = cornerRadius;
+                
+                // Update ContentClipBorder corner radius to match
+                if (ContentClipBorder != null)
+                {
+                    // When snapped, remove corner radius on rounded side to prevent clipping
+                    // This allows the background to extend fully to cover rounded corners
+                    if (isSnappedLeft)
+                    {
+                        // Snapped to left: remove right corners (rounded side) from ContentClipBorder
+                        // so background extends fully to cover the window's rounded corners
+                        ContentClipBorder.CornerRadius = new CornerRadius(0, 0, 0, 0); // No corners on ContentClipBorder
+                    }
+                    else if (isSnappedRight)
+                    {
+                        // Snapped to right: remove left corners (rounded side) from ContentClipBorder
+                        ContentClipBorder.CornerRadius = new CornerRadius(0, 0, 0, 0); // No corners on ContentClipBorder
+                    }
+                    else
+                    {
+                        // Not snapped: use matching corner radius
+                        ContentClipBorder.CornerRadius = cornerRadius;
+                    }
+                    
+                    // Reset margin and transforms
+                    ContentClipBorder.Margin = new Thickness(0);
+                    ContentClipBorder.RenderTransform = null;
+                }
+                
+                // Update TitleBar corner radius (only top corners matter)
+                if (TitleBarBorder != null)
+                {
+                    var titleBarCornerRadius = new CornerRadius(
+                        cornerRadius.TopLeft,  // Top-left
+                        cornerRadius.TopRight, // Top-right
+                        0,                      // Bottom-right (always 0)
+                        0                       // Bottom-left (always 0)
+                    );
+                    TitleBarBorder.CornerRadius = titleBarCornerRadius;
+                }
                 
                 // Clip the border itself to ensure clean rounded corners
                 // Use window dimensions to ensure perfect alignment
@@ -906,8 +1053,8 @@ public partial class MainWindow : Window
                 
                 if (borderWidth > 0 && borderHeight > 0)
                 {
-                    // Use PathGeometry for more precise clipping
-                    WindowBorder.Clip = CreateRoundedRectangleGeometry(borderWidth, borderHeight, 8.0);
+                    // Use PathGeometry for more precise clipping with conditional corners
+                    WindowBorder.Clip = CreateRoundedRectangleGeometry(borderWidth, borderHeight, cornerRadius);
                 }
             }
             
@@ -926,8 +1073,26 @@ public partial class MainWindow : Window
                     var gridHeight = Math.Max(ActualHeight, RenderSize.Height);
                     if (gridWidth > 0 && gridHeight > 0)
                     {
-                        // Use PathGeometry for more precise clipping
-                        MainContentGrid.Clip = CreateRoundedRectangleGeometry(gridWidth, gridHeight, 8.0);
+                        // Check if window is snapped to left or right edge
+                        var isSnappedLeft = IsWindowSnappedToLeft();
+                        var isSnappedRight = IsWindowSnappedToRight();
+                        
+                        CornerRadius cornerRadius;
+                        if (isSnappedLeft)
+                        {
+                            cornerRadius = new CornerRadius(0, 8, 0, 8); // No left corners
+                        }
+                        else if (isSnappedRight)
+                        {
+                            cornerRadius = new CornerRadius(8, 0, 8, 0); // No right corners
+                        }
+                        else
+                        {
+                            cornerRadius = new CornerRadius(8); // All corners rounded
+                        }
+                        
+                        // Use PathGeometry for more precise clipping with conditional corners
+                        MainContentGrid.Clip = CreateRoundedRectangleGeometry(gridWidth, gridHeight, cornerRadius);
                     }
                 }
             }
@@ -937,52 +1102,133 @@ public partial class MainWindow : Window
         UpdateTitleBarMargins();
     }
 
-    private Geometry CreateRoundedRectangleGeometry(double width, double height, double cornerRadius)
+    private bool IsWindowSnappedToLeft()
+    {
+        if (WindowState == WindowState.Maximized)
+            return false;
+        
+        try
+        {
+            var workingArea = SystemParameters.WorkArea;
+            var leftEdge = workingArea.Left;
+            var tolerance = 5.0; // Allow 5px tolerance for edge detection
+            
+            // Check if window is touching or very close to the left edge
+            return Math.Abs(Left - leftEdge) <= tolerance;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private bool IsWindowSnappedToRight()
+    {
+        if (WindowState == WindowState.Maximized)
+            return false;
+        
+        try
+        {
+            var workingArea = SystemParameters.WorkArea;
+            var rightEdge = workingArea.Right;
+            var tolerance = 5.0; // Allow 5px tolerance for edge detection
+            var windowRight = Left + ActualWidth;
+            
+            // Check if window is touching or very close to the right edge
+            return Math.Abs(windowRight - rightEdge) <= tolerance;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private Geometry CreateRoundedRectangleGeometry(double width, double height, CornerRadius cornerRadius)
     {
         var pathGeometry = new PathGeometry();
         var figure = new PathFigure();
-        figure.StartPoint = new Point(cornerRadius, 0);
+        
+        var topLeft = cornerRadius.TopLeft;
+        var topRight = cornerRadius.TopRight;
+        var bottomRight = cornerRadius.BottomRight;
+        var bottomLeft = cornerRadius.BottomLeft;
+        
+        figure.StartPoint = new Point(topLeft, 0);
         
         // Top edge
-        figure.Segments.Add(new LineSegment(new Point(width - cornerRadius, 0), true));
+        figure.Segments.Add(new LineSegment(new Point(width - topRight, 0), true));
         
         // Top-right corner
+        if (topRight > 0)
+        {
         figure.Segments.Add(new ArcSegment(
-            new Point(width, cornerRadius),
-            new Size(cornerRadius, cornerRadius),
+                new Point(width, topRight),
+                new Size(topRight, topRight),
             0, false, SweepDirection.Clockwise, true));
+        }
+        else
+        {
+            figure.Segments.Add(new LineSegment(new Point(width, 0), true));
+        }
         
         // Right edge
-        figure.Segments.Add(new LineSegment(new Point(width, height - cornerRadius), true));
+        figure.Segments.Add(new LineSegment(new Point(width, height - bottomRight), true));
         
         // Bottom-right corner
+        if (bottomRight > 0)
+        {
         figure.Segments.Add(new ArcSegment(
-            new Point(width - cornerRadius, height),
-            new Size(cornerRadius, cornerRadius),
+                new Point(width - bottomRight, height),
+                new Size(bottomRight, bottomRight),
             0, false, SweepDirection.Clockwise, true));
+        }
+        else
+        {
+            figure.Segments.Add(new LineSegment(new Point(width, height), true));
+        }
         
         // Bottom edge
-        figure.Segments.Add(new LineSegment(new Point(cornerRadius, height), true));
+        figure.Segments.Add(new LineSegment(new Point(bottomLeft, height), true));
         
         // Bottom-left corner
+        if (bottomLeft > 0)
+        {
         figure.Segments.Add(new ArcSegment(
-            new Point(0, height - cornerRadius),
-            new Size(cornerRadius, cornerRadius),
+                new Point(0, height - bottomLeft),
+                new Size(bottomLeft, bottomLeft),
             0, false, SweepDirection.Clockwise, true));
+        }
+        else
+        {
+            figure.Segments.Add(new LineSegment(new Point(0, height), true));
+        }
         
         // Left edge
-        figure.Segments.Add(new LineSegment(new Point(0, cornerRadius), true));
+        figure.Segments.Add(new LineSegment(new Point(0, topLeft), true));
         
         // Top-left corner
+        if (topLeft > 0)
+        {
         figure.Segments.Add(new ArcSegment(
-            new Point(cornerRadius, 0),
-            new Size(cornerRadius, cornerRadius),
+                new Point(topLeft, 0),
+                new Size(topLeft, topLeft),
             0, false, SweepDirection.Clockwise, true));
+        }
+        else
+        {
+            figure.Segments.Add(new LineSegment(new Point(0, 0), true));
+        }
         
         figure.IsClosed = true;
         pathGeometry.Figures.Add(figure);
         
         return pathGeometry;
+    }
+    
+    // Overload for backward compatibility with single corner radius value
+    private Geometry CreateRoundedRectangleGeometry(double width, double height, double cornerRadius)
+    {
+        return CreateRoundedRectangleGeometry(width, height, new CornerRadius(cornerRadius));
     }
 
     private void UpdateWindowClip()
@@ -991,6 +1237,9 @@ public partial class MainWindow : Window
         {
             if (WindowState == WindowState.Maximized)
             {
+                // Reset window background to transparent when maximized
+                Background = System.Windows.Media.Brushes.Transparent;
+                
                 // No clipping when maximized
                 Clip = null;
                 if (WindowBorder != null)
@@ -1009,12 +1258,48 @@ public partial class MainWindow : Window
             else
             {
                 // Apply rounded corner clipping when not maximized
-                var cornerRadius = 8.0;
+                // Check if window is snapped to left or right edge
+                var isSnappedLeft = IsWindowSnappedToLeft();
+                var isSnappedRight = IsWindowSnappedToRight();
+                
+                CornerRadius cornerRadius;
+                if (isSnappedLeft)
+                {
+                    cornerRadius = new CornerRadius(0, 8, 0, 8); // No left corners
+                }
+                else if (isSnappedRight)
+                {
+                    cornerRadius = new CornerRadius(8, 0, 8, 0); // No right corners
+                }
+                else
+                {
+                    cornerRadius = new CornerRadius(8); // All corners rounded
+                }
+                
                 var width = Math.Max(ActualWidth, RenderSize.Width);
                 var height = Math.Max(ActualHeight, RenderSize.Height);
                 
                 if (width > 0 && height > 0)
                 {
+                    // When snapped, set window background to match ContentClipBorder to prevent white showing
+                    // through at rounded corners where the window clip cuts off ContentClipBorder
+                    if (isSnappedLeft || isSnappedRight)
+                    {
+                        // Set window background to match ContentClipBorder background color
+                        // This ensures that when the window clip cuts off ContentClipBorder at rounded corners,
+                        // we see the same color instead of white
+                        var contentBackgroundBrush = TryFindResource("ContentBackgroundBrush") as System.Windows.Media.Brush;
+                        if (contentBackgroundBrush != null)
+                        {
+                            Background = contentBackgroundBrush;
+                        }
+                    }
+                    else
+                    {
+                        // When not snapped, keep window background transparent
+                        Background = System.Windows.Media.Brushes.Transparent;
+                    }
+                    
                     // Clip the window itself - transparent background, so any protrusion will be transparent
                     Clip = CreateRoundedRectangleGeometry(width, height, cornerRadius);
                     
@@ -1024,11 +1309,20 @@ public partial class MainWindow : Window
                         WindowBorder.Clip = CreateRoundedRectangleGeometry(width, height, cornerRadius);
                     }
                     
-                    // Clip ContentClipBorder (which has the white background) - make it slightly smaller to prevent white corners
+                    // Clip ContentClipBorder (which has the white/colored background)
                     if (ContentClipBorder != null)
                     {
-                        // Make ContentClipBorder slightly smaller than the window to prevent white corners
-                        // Use a small inset (1 pixel) to ensure no white shows at corners
+                        // When snapped, don't clip ContentClipBorder - let it fill the entire window
+                        // The window's clip will handle the rounded corners, and the background
+                        // will fully cover the rounded areas without white showing through
+                        if (isSnappedLeft || isSnappedRight)
+                        {
+                            // Remove clipping to let background extend fully to cover rounded corners
+                            ContentClipBorder.Clip = null;
+                        }
+                        else
+                        {
+                            // When not snapped, use a small inset to prevent white corners
                         var inset = 0.5;
                         var contentWidth = Math.Max(width - (inset * 2), 0);
                         var contentHeight = Math.Max(height - (inset * 2), 0);
@@ -1045,10 +1339,11 @@ public partial class MainWindow : Window
                         {
                             // Fallback to full window size if dimensions aren't ready
                             ContentClipBorder.Clip = CreateRoundedRectangleGeometry(width, height, cornerRadius);
+                            }
                         }
                     }
                     
-                    // Ensure MainContentGrid is also clipped
+                    // Ensure MainContentGrid is also clipped (already handled in UpdateWindowCornerRadius, but keep for consistency)
                     if (MainContentGrid != null)
                     {
                         MainContentGrid.Clip = CreateRoundedRectangleGeometry(width, height, cornerRadius);
@@ -1080,6 +1375,209 @@ public partial class MainWindow : Window
                 AppIcon.Margin = new Thickness(12, 0, 8, 0);
             if (SearchBarBorder != null)
                 SearchBarBorder.Margin = new Thickness(0);
+        }
+    }
+
+
+    private void CompressPdfMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var configuration = ((App)System.Windows.Application.Current).GetService<Microsoft.Extensions.Configuration.IConfiguration>();
+            if (configuration != null)
+            {
+                var compressWindow = new CompressPdfWindow
+                {
+                    Owner = this,
+                    Title = "Compress PDF Files - FileWise"
+                };
+                compressWindow.Show();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error opening compress PDF window: {ex.Message}");
+            System.Windows.MessageBox.Show($"Error opening compress PDF window: {ex.Message}", "Error",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void EditMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        // The context menu will open automatically when the button is clicked
+        // This handler is just to satisfy the XAML binding
+    }
+
+    private void UndoMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        ApplicationCommands.Undo.Execute(null, this);
+    }
+
+    private void RedoMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        ApplicationCommands.Redo.Execute(null, this);
+    }
+
+    private void CutMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        ApplicationCommands.Cut.Execute(null, this);
+    }
+
+    private void CopyMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        ApplicationCommands.Copy.Execute(null, this);
+    }
+
+    private void PasteMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        ApplicationCommands.Paste.Execute(null, this);
+    }
+
+    private void FindMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        ApplicationCommands.Find.Execute(null, this);
+    }
+
+    private void UpdateProcessingAnimation()
+    {
+        try
+        {
+            if (ProcessingStatusTextBlock == null)
+                return;
+
+            // Get localized strings
+            var thinking = LocalizationService.Instance.GetString("Animation_Thinking");
+            var planning = LocalizationService.Instance.GetString("Animation_Planning");
+            var generating = LocalizationService.Instance.GetString("Animation_GeneratingResponse");
+
+            // Create animation with localized strings and animated ellipsis
+            var animation = new System.Windows.Media.Animation.StringAnimationUsingKeyFrames();
+            animation.Duration = TimeSpan.FromSeconds(4.5); // 1.5 seconds per state (3 frames each)
+            animation.RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever;
+
+            // Thinking with animated dots (0.0s, 0.5s, 1.0s)
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(thinking, TimeSpan.FromSeconds(0.0)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(thinking + ".", TimeSpan.FromSeconds(0.5)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(thinking + "..", TimeSpan.FromSeconds(1.0)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(thinking + "...", TimeSpan.FromSeconds(1.5)));
+
+            // Planning with animated dots (1.5s, 2.0s, 2.5s)
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(planning, TimeSpan.FromSeconds(1.5)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(planning + ".", TimeSpan.FromSeconds(2.0)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(planning + "..", TimeSpan.FromSeconds(2.5)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(planning + "...", TimeSpan.FromSeconds(3.0)));
+
+            // Generating Response with animated dots (3.0s, 3.5s, 4.0s)
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(generating, TimeSpan.FromSeconds(3.0)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(generating + ".", TimeSpan.FromSeconds(3.5)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(generating + "..", TimeSpan.FromSeconds(4.0)));
+            animation.KeyFrames.Add(new System.Windows.Media.Animation.DiscreteStringKeyFrame(generating + "...", TimeSpan.FromSeconds(4.5)));
+
+            // Start the animation
+            ProcessingStatusTextBlock.BeginAnimation(System.Windows.Controls.TextBlock.TextProperty, animation);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating processing animation: {ex.Message}");
+        }
+    }
+
+    private void StopProcessingAnimation()
+    {
+        try
+        {
+            if (ProcessingStatusTextBlock == null)
+                return;
+
+            // Stop the animation and clear the text
+            ProcessingStatusTextBlock.BeginAnimation(System.Windows.Controls.TextBlock.TextProperty, null);
+            ProcessingStatusTextBlock.Text = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error stopping processing animation: {ex.Message}");
+        }
+    }
+
+    private void ImageUploadButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp|All Files|*.*",
+                Multiselect = false,
+                Title = "Select Image to Upload"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                // TODO: Implement image upload functionality
+                System.Diagnostics.Debug.WriteLine($"Image selected: {openFileDialog.FileName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in ImageUploadButton_Click: {ex.Message}");
+            System.Windows.MessageBox.Show($"Error selecting image: {ex.Message}", "Error",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private void LocalizationService_LanguageChanged(object? sender, EventArgs e)
+    {
+        // Update UI strings when language changes
+        Dispatcher.Invoke(() => UpdateUIStrings());
+        
+        // If processing animation is running, restart it with new language
+        if (DataContext is MainViewModel vm && vm.IsProcessingQuery)
+        {
+            UpdateProcessingAnimation();
+        }
+    }
+
+    private void UpdateUIStrings()
+    {
+        try
+        {
+            var loc = LocalizationService.Instance;
+            
+            // Update menu buttons
+            if (FileMenuButton != null)
+                FileMenuButton.Content = loc.GetString("Menu_File");
+            if (EditMenuButton != null)
+                EditMenuButton.Content = loc.GetString("Menu_Edit");
+            
+            // Update folder selection label
+            if (FolderSelectionLabel != null)
+                FolderSelectionLabel.Text = loc.GetString("Label_FolderSelection");
+            
+            // Update select folder button
+            if (SelectFolderButton != null)
+                SelectFolderButton.Content = loc.GetString("Button_SelectFolder");
+            
+            // Update search label
+            if (SearchLabel != null)
+                SearchLabel.Text = loc.GetString("Button_Search");
+            
+            // Update sort buttons
+            if (SortByNameButton != null)
+                SortByNameButton.Content = loc.GetString("Button_Sort_Name");
+            if (SortByTypeButton != null)
+                SortByTypeButton.Content = loc.GetString("Button_Sort_Type");
+            if (SortBySizeButton != null)
+                SortBySizeButton.Content = loc.GetString("Button_Sort_Size");
+            if (SortByDateButton != null)
+                SortByDateButton.Content = loc.GetString("Button_Sort_Date");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating UI strings: {ex.Message}");
         }
     }
 }

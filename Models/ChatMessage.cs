@@ -6,5 +6,6 @@ public class ChatMessage
     public bool IsUser { get; set; }
     public DateTime Timestamp { get; set; }
     public List<SearchResult>? RelatedFiles { get; set; }
+    public string? ImagePath { get; set; }
 }
 

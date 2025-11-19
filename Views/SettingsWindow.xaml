@@ -20,7 +20,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TitleBarForegroundBrush}"/>
+                <TextBlock x:Name="SettingsTitle" Text="Settings" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TitleBarForegroundBrush}"/>
                 <Button x:Name="ConsoleLogToggleButton" 
                         Grid.Column="1"
                         Content="Show Console Log" 
@@ -60,10 +60,10 @@
                 <!-- API Configuration -->
                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="API Configuration" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="APIConfigurationTitle" Text="API Configuration" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         
                         <!-- API Mode Selection -->
-                        <TextBlock Text="API Mode" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="APIModeLabel" Text="API Mode" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         <RadioButton x:Name="ApiKeyModeRadio" 
                                      Content="Use API Key (Gemini Cloud)" 
                                      GroupName="ApiMode"
@@ -81,7 +81,7 @@
                         
                         <!-- API Key Section -->
                         <StackPanel x:Name="ApiKeySection" Margin="0,0,0,10">
-                            <TextBlock Text="API Key" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                            <TextBlock x:Name="APIKeyLabel" Text="API Key" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
                             <PasswordBox x:Name="ApiKeyPasswordBox" 
                                          FontSize="12"
                                          Padding="8,6"
@@ -90,7 +90,7 @@
                                          BorderThickness="1"
                                          Foreground="{DynamicResource PrimaryTextBrush}"
                                          Margin="0,0,0,10"/>
-                            <TextBlock Text="Your Gemini API key is stored securely. Get your key from https://aistudio.google.com/app/apikey" 
+                            <TextBlock x:Name="APIKeyDescription" Text="Your Gemini API key is stored securely. Get your key from https://aistudio.google.com/app/apikey" 
                                        FontSize="11" 
                                        Foreground="{DynamicResource SecondaryTextBrush}" 
                                        TextWrapping="Wrap"
@@ -99,7 +99,7 @@
                         
                         <!-- Localhost Section -->
                         <StackPanel x:Name="LocalhostSection" Margin="0,0,0,10" Visibility="Collapsed">
-                            <TextBlock Text="Localhost URL" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                            <TextBlock x:Name="LocalhostURLLabel" Text="Localhost URL" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
                             <TextBox x:Name="LocalhostUrlTextBox" 
                                      FontSize="12"
                                      Padding="8,6"
@@ -108,14 +108,14 @@
                                      BorderThickness="1"
                                      Foreground="{DynamicResource PrimaryTextBrush}"
                                      Margin="0,0,0,10"/>
-                            <TextBlock Text="URL for your local model server (e.g., http://localhost:11434 for Ollama)" 
+                            <TextBlock x:Name="LocalhostURLDescription" Text="URL for your local model server (e.g., http://localhost:11434 for Ollama)" 
                                        FontSize="11" 
                                        Foreground="{DynamicResource SecondaryTextBrush}" 
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,15"/>
                         </StackPanel>
                         
-                        <Button Content="Save API Settings" 
+                        <Button x:Name="SaveAPISettingsButton" Content="Save API Settings" 
                                 Width="140" 
                                 Height="32"
                                 Background="{DynamicResource AccentBrush}"
@@ -126,11 +126,42 @@
                     </StackPanel>
                 </Border>
 
+                <!-- User Profile Settings -->
+                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock x:Name="UserProfileTitle" Text="User Profile" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        
+                        <TextBlock x:Name="NicknameLabel" Text="Nickname" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBox x:Name="NicknameTextBox" 
+                                 FontSize="12"
+                                 Padding="8,6"
+                                 Background="{DynamicResource CardBackgroundBrush}"
+                                 BorderBrush="{DynamicResource BorderBrush}"
+                                 BorderThickness="1"
+                                 Foreground="{DynamicResource PrimaryTextBrush}"
+                                 Margin="0,0,0,10"/>
+                        <TextBlock x:Name="NicknameDescription" Text="Enter your nickname. The AI will remember and use it in conversations." 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource SecondaryTextBrush}" 
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,15"/>
+                        
+                        <Button x:Name="SaveProfileSettingsButton" Content="Save Profile Settings" 
+                                Width="160" 
+                                Height="32"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource AccentForegroundBrush}"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Click="SaveProfileSettingsButton_Click"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Appearance Settings -->
                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Appearance" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                        <TextBlock Text="Choose how FileWise looks. Theme changes apply immediately."
+                        <TextBlock x:Name="AppearanceTitle" Text="Appearance" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="AppearanceDescription" Text="Choose how FileWise looks. Theme changes apply immediately."
                                    FontSize="12"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    Margin="0,0,0,15"/>
@@ -159,19 +190,184 @@
                                          Checked="ThemeRadio_Checked"/>
                         </StackPanel>
                         
-                        <TextBlock Text="Tip: Choose “Follow System” to automatically switch when Windows changes between light and dark mode."
+                        <TextBlock x:Name="ThemeTip" Text="Tip: Choose &quot;Follow System&quot; to automatically switch when Windows changes between light and dark mode."
                                    FontSize="11"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    Margin="0,12,0,0"/>
                     </StackPanel>
                 </Border>
                 
+                <!-- UI Language Settings -->
+                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock x:Name="UILanguageTitle" Text="Interface Language" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        
+                        <TextBlock x:Name="UILanguageLabel" Text="Language" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <ComboBox x:Name="UILanguageComboBox"
+                                  FontSize="12"
+                                  Padding="8,6"
+                                  Background="{DynamicResource SurfaceBackgroundBrush}"
+                                  BorderBrush="{DynamicResource BorderBrush}"
+                                  BorderThickness="1"
+                                  Foreground="{DynamicResource PrimaryTextBrush}"
+                                  Margin="0,0,0,10">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ComboBox">
+                                                <Grid>
+                                                    <ToggleButton x:Name="ToggleButton"
+                                                                  Focusable="False"
+                                                                  IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                  ClickMode="Press"
+                                                                  Background="{TemplateBinding Background}"
+                                                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                                                  BorderThickness="{TemplateBinding BorderThickness}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition/>
+                                                                <ColumnDefinition Width="20"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <ContentPresenter x:Name="ContentSite"
+                                                                              IsHitTestVisible="False"
+                                                                              Content="{TemplateBinding SelectionBoxItem}"
+                                                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                                              Margin="{TemplateBinding Padding}"
+                                                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                                                <ContentPresenter.Resources>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                                                    </Style>
+                                                                </ContentPresenter.Resources>
+                                                            </ContentPresenter>
+                                                            <Path x:Name="Arrow"
+                                                                  Grid.Column="1"
+                                                                  Fill="{TemplateBinding Foreground}"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                                        </Grid>
+                                                    </ToggleButton>
+                                                    <TextBox x:Name="PART_EditableTextBox"
+                                                             Style="{x:Null}"
+                                                             HorizontalAlignment="Left"
+                                                             VerticalAlignment="Center"
+                                                             Margin="{TemplateBinding Padding}"
+                                                             Focusable="True"
+                                                             Background="Transparent"
+                                                             BorderThickness="0"
+                                                             Foreground="{TemplateBinding Foreground}"
+                                                             Visibility="Hidden"
+                                                             IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                                                    <Popup x:Name="Popup"
+                                                           Placement="Bottom"
+                                                           IsOpen="{TemplateBinding IsDropDownOpen}"
+                                                           AllowsTransparency="True"
+                                                           Focusable="False"
+                                                           PopupAnimation="Slide">
+                                                        <Grid x:Name="DropDown"
+                                                              SnapsToDevicePixels="True"
+                                                              MinWidth="{TemplateBinding ActualWidth}"
+                                                              MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                                            <Border x:Name="DropDownBorder"
+                                                                    Background="{DynamicResource CardBackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="4">
+                                                                <ScrollViewer Margin="4,6,4,6"
+                                                                              SnapsToDevicePixels="True">
+                                                                    <StackPanel IsItemsHost="True"
+                                                                                KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                                </ScrollViewer>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Popup>
+                                                </Grid>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsEditable" Value="true">
+                                                        <Setter Property="IsHitTestVisible" TargetName="PART_EditableTextBox" Value="true"/>
+                                                        <Setter Property="Visibility" TargetName="PART_EditableTextBox" Value="Visible"/>
+                                                        <Setter Property="Visibility" TargetName="ContentSite" Value="Hidden"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ComboBox.Style>
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem">
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
+                            <ComboBoxItem Content="English" Tag="en-US"/>
+                            <ComboBoxItem Content="繁體中文 (Traditional Chinese)" Tag="zh-TW"/>
+                        </ComboBox>
+                        <TextBlock x:Name="UILanguageDescription" Text="Change the interface language. Restart the application for changes to take effect." 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource SecondaryTextBrush}" 
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,15"/>
+                        
+                        <Button x:Name="SaveUISettingsButton" Content="Save UI Settings" 
+                                Width="140" 
+                                Height="32"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource AccentForegroundBrush}"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Click="SaveUISettingsButton_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- OCR Language Settings -->
+                <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock x:Name="OCRLanguageTitle" Text="OCR Language Support" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        
+                        <CheckBox x:Name="TraditionalChineseCheckBox"
+                                  Content="Enable Traditional Chinese (繁體中文) OCR"
+                                  FontSize="12"
+                                  Margin="0,0,0,10"
+                                  Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="OCRDescription" Text="When enabled, OCR will recognize both English and Traditional Chinese text. Requires chi_tra.traineddata in the tessdata folder." 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource SecondaryTextBrush}" 
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,15"/>
+                        
+                        <Button x:Name="SaveOCRSettingsButton" Content="Save OCR Settings" 
+                                Width="140" 
+                                Height="32"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource AccentForegroundBrush}"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Click="SaveOcrSettingsButton_Click"/>
+                    </StackPanel>
+                </Border>
+                
                 <!-- Indexing Settings -->
                 <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Indexing Configuration" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="IndexingTitle" Text="Indexing Configuration" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         
-                        <TextBlock Text="Chunk Size" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="ChunkSizeLabel" Text="Chunk Size" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         <TextBox x:Name="ChunkSizeTextBox" 
                                  FontSize="12"
                                  Padding="8,6"
@@ -180,12 +376,12 @@
                                  BorderThickness="1"
                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Number of characters per text chunk (default: 1000)" 
+                        <TextBlock x:Name="ChunkSizeDescription" Text="Number of characters per text chunk (default: 1000)" 
                                    FontSize="11" 
                                    Foreground="{DynamicResource SecondaryTextBrush}" 
                                    Margin="0,0,0,15"/>
                         
-                        <TextBlock Text="Max Concurrent Files" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="MaxConcurrentFilesLabel" Text="Max Concurrent Files" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         <TextBox x:Name="MaxConcurrentFilesTextBox" 
                                  FontSize="12"
                                  Padding="8,6"
@@ -194,12 +390,12 @@
                                  BorderThickness="1"
                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Maximum number of files to process simultaneously (default: 5)" 
+                        <TextBlock x:Name="MaxConcurrentFilesDescription" Text="Maximum number of files to process simultaneously (default: 5)" 
                                    FontSize="11" 
                                    Foreground="{DynamicResource SecondaryTextBrush}" 
                                    Margin="0,0,0,15"/>
                         
-                        <TextBlock Text="Max Concurrent PDFs" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="MaxConcurrentPdfsLabel" Text="Max Concurrent PDFs" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         <TextBox x:Name="MaxConcurrentPdfsTextBox" 
                                  FontSize="12"
                                  Padding="8,6"
@@ -208,12 +404,12 @@
                                  BorderThickness="1"
                                  Foreground="{DynamicResource PrimaryTextBrush}"
                                  Margin="0,0,0,10"/>
-                        <TextBlock Text="Maximum number of PDFs to process simultaneously (default: 2)" 
+                        <TextBlock x:Name="MaxConcurrentPdfsDescription" Text="Maximum number of PDFs to process simultaneously (default: 2)" 
                                    FontSize="11" 
                                    Foreground="{DynamicResource SecondaryTextBrush}" 
                                    Margin="0,0,0,15"/>
                         
-                        <Button Content="Save Indexing Settings" 
+                        <Button x:Name="SaveIndexingSettingsButton" Content="Save Indexing Settings" 
                                 Width="160" 
                                 Height="32"
                                 Background="{DynamicResource AccentBrush}"

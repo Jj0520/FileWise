@@ -1,10 +1,13 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using FileWise.Utilities;
+using FileWise.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -18,10 +21,22 @@ public partial class SettingsWindow : Window
     private readonly IConfiguration _configuration;
     private readonly string _configFilePath;
     private bool _isLoadingSettings;
+    private UserSettingsService? _userSettingsService;
+    private bool _apiSettingsRequireRestart = false;
 
     public SettingsWindow(IConfiguration configuration)
     {
         _configuration = configuration;
+        
+        // Get UserSettingsService from App's service provider
+        try
+        {
+            _userSettingsService = ((App)System.Windows.Application.Current).GetService<UserSettingsService>();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error getting UserSettingsService: {ex.Message}");
+        }
         
         // Get config file path
         var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
@@ -34,8 +49,14 @@ public partial class SettingsWindow : Window
         
         InitializeComponent();
         
+        // Subscribe to language changes
+        LocalizationService.Instance.LanguageChanged += LocalizationService_LanguageChanged;
+        
         // Load current settings
         LoadSettings();
+        
+        // Update UI strings based on current language
+        UpdateUIStrings();
         
         // Redirect console output (but don't show by default)
         var consoleWriter = new ConsoleLogWriter(this);
@@ -56,6 +77,128 @@ public partial class SettingsWindow : Window
         {
             ConsoleScrollViewer.ScrollToEnd();
         }), DispatcherPriority.Loaded);
+        }
+    }
+
+    private void LocalizationService_LanguageChanged(object? sender, EventArgs e)
+    {
+        // Update UI strings when language changes
+        Dispatcher.Invoke(() => UpdateUIStrings());
+    }
+
+    private void UpdateUIStrings()
+    {
+        try
+        {
+            var loc = LocalizationService.Instance;
+            
+            // Update window title
+            if (SettingsTitle != null)
+                SettingsTitle.Text = loc.GetString("Settings_Title");
+            Title = loc.GetString("Window_Settings");
+            
+            // Update console log button
+            if (ConsoleLogToggleButton != null)
+            {
+                ConsoleLogToggleButton.Content = ConsoleLogBorder.Visibility == Visibility.Visible 
+                    ? loc.GetString("Button_HideConsoleLog") 
+                    : loc.GetString("Button_ShowConsoleLog");
+            }
+            
+            // Update API Configuration section
+            if (APIConfigurationTitle != null)
+                APIConfigurationTitle.Text = loc.GetString("Settings_API_Configuration");
+            if (APIModeLabel != null)
+                APIModeLabel.Text = loc.GetString("Settings_API_Mode");
+            if (ApiKeyModeRadio != null)
+                ApiKeyModeRadio.Content = loc.GetString("Settings_API_Mode_ApiKey");
+            if (LocalhostModeRadio != null)
+                LocalhostModeRadio.Content = loc.GetString("Settings_API_Mode_Localhost");
+            if (APIKeyLabel != null)
+                APIKeyLabel.Text = loc.GetString("Settings_API_Key");
+            if (APIKeyDescription != null)
+                APIKeyDescription.Text = loc.GetString("Settings_API_Key_Description");
+            if (LocalhostURLLabel != null)
+                LocalhostURLLabel.Text = loc.GetString("Settings_Localhost_URL");
+            if (LocalhostURLDescription != null)
+                LocalhostURLDescription.Text = loc.GetString("Settings_Localhost_URL_Description");
+            if (SaveAPISettingsButton != null)
+                SaveAPISettingsButton.Content = loc.GetString("Button_SaveAPISettings");
+            
+            // Update User Profile section
+            if (UserProfileTitle != null)
+                UserProfileTitle.Text = loc.GetString("Settings_User_Profile");
+            if (NicknameLabel != null)
+                NicknameLabel.Text = loc.GetString("Settings_Nickname");
+            if (NicknameDescription != null)
+                NicknameDescription.Text = loc.GetString("Settings_Nickname_Description");
+            if (SaveProfileSettingsButton != null)
+                SaveProfileSettingsButton.Content = loc.GetString("Button_SaveProfileSettings");
+            
+            // Update Appearance section
+            if (AppearanceTitle != null)
+                AppearanceTitle.Text = loc.GetString("Settings_Appearance");
+            if (AppearanceDescription != null)
+                AppearanceDescription.Text = loc.GetString("Settings_Appearance_Description");
+            if (LightThemeRadio != null)
+                LightThemeRadio.Content = loc.GetString("Settings_Theme_Light");
+            if (DarkThemeRadio != null)
+                DarkThemeRadio.Content = loc.GetString("Settings_Theme_Dark");
+            if (SystemThemeRadio != null)
+                SystemThemeRadio.Content = loc.GetString("Settings_Theme_System");
+            if (ThemeTip != null)
+                ThemeTip.Text = loc.GetString("Settings_Theme_Tip");
+            
+            // Update UI Language section
+            if (UILanguageTitle != null)
+                UILanguageTitle.Text = loc.GetString("Settings_UI_Language");
+            if (UILanguageLabel != null)
+                UILanguageLabel.Text = loc.GetString("Settings_UI_Language");
+            if (UILanguageDescription != null)
+                UILanguageDescription.Text = loc.GetString("Settings_UI_Language_Description");
+            if (SaveUISettingsButton != null)
+                SaveUISettingsButton.Content = loc.GetString("Button_SaveUISettings");
+            
+            // Update OCR Language section
+            if (OCRLanguageTitle != null)
+                OCRLanguageTitle.Text = loc.GetString("Settings_OCR_Language");
+            if (TraditionalChineseCheckBox != null)
+                TraditionalChineseCheckBox.Content = loc.GetString("Settings_OCR_TraditionalChinese");
+            if (OCRDescription != null)
+                OCRDescription.Text = loc.GetString("Settings_OCR_Description");
+            if (SaveOCRSettingsButton != null)
+                SaveOCRSettingsButton.Content = loc.GetString("Button_SaveOCRSettings");
+            
+            // Update Indexing section
+            if (IndexingTitle != null)
+                IndexingTitle.Text = loc.GetString("Settings_Indexing");
+            if (ChunkSizeLabel != null)
+                ChunkSizeLabel.Text = loc.GetString("Settings_Indexing_ChunkSize");
+            if (ChunkSizeDescription != null)
+                ChunkSizeDescription.Text = loc.GetString("Settings_Indexing_ChunkSize_Description");
+            if (MaxConcurrentFilesLabel != null)
+                MaxConcurrentFilesLabel.Text = loc.GetString("Settings_Indexing_MaxConcurrentFiles");
+            if (MaxConcurrentFilesDescription != null)
+                MaxConcurrentFilesDescription.Text = loc.GetString("Settings_Indexing_MaxConcurrentFiles_Description");
+            if (MaxConcurrentPdfsLabel != null)
+                MaxConcurrentPdfsLabel.Text = loc.GetString("Settings_Indexing_MaxConcurrentPdfs");
+            if (MaxConcurrentPdfsDescription != null)
+                MaxConcurrentPdfsDescription.Text = loc.GetString("Settings_Indexing_MaxConcurrentPdfs_Description");
+            if (SaveIndexingSettingsButton != null)
+                SaveIndexingSettingsButton.Content = loc.GetString("Button_SaveIndexingSettings");
+            
+            // Update ComboBox items
+            if (UILanguageComboBox != null && UILanguageComboBox.Items.Count >= 2)
+            {
+                if (UILanguageComboBox.Items[0] is ComboBoxItem item1)
+                    item1.Content = loc.GetString("Settings_UI_Language_English");
+                if (UILanguageComboBox.Items[1] is ComboBoxItem item2)
+                    item2.Content = loc.GetString("Settings_UI_Language_TraditionalChinese");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating UI strings: {ex.Message}");
         }
     }
 
@@ -91,6 +234,28 @@ public partial class SettingsWindow : Window
             ChunkSizeTextBox.Text = _configuration["Indexing:ChunkSize"] ?? "1000";
             MaxConcurrentFilesTextBox.Text = _configuration["Indexing:MaxConcurrentFiles"] ?? "5";
             MaxConcurrentPdfsTextBox.Text = _configuration["Indexing:MaxConcurrentPdfs"] ?? "2";
+
+            // Load nickname and UI language
+            if (_userSettingsService != null)
+            {
+                NicknameTextBox.Text = _userSettingsService.Nickname ?? string.Empty;
+                TraditionalChineseCheckBox.IsChecked = _userSettingsService.EnableTraditionalChinese;
+                
+                // Load UI language
+                var savedLanguage = _userSettingsService.UILanguage ?? "en-US";
+                foreach (ComboBoxItem item in UILanguageComboBox.Items)
+                {
+                    if (item.Tag?.ToString() == savedLanguage)
+                    {
+                        UILanguageComboBox.SelectedItem = item;
+                        break;
+                    }
+                }
+                if (UILanguageComboBox.SelectedItem == null && UILanguageComboBox.Items.Count > 0)
+                {
+                    UILanguageComboBox.SelectedIndex = 0; // Default to first item
+                }
+            }
 
             var themePreference = ThemeManager.ParsePreference(_configuration["Appearance:Theme"]);
             switch (themePreference)
@@ -170,12 +335,64 @@ public partial class SettingsWindow : Window
                 SaveConfigValue("Gemini:ApiKey", apiKey);
             }
             
-            System.Windows.MessageBox.Show("API settings saved successfully. Restart the application for changes to take effect.", 
-                "Settings Saved", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            _apiSettingsRequireRestart = true;
+            
+            var result = System.Windows.MessageBox.Show(
+                "API settings saved successfully. The application needs to restart for changes to take effect.\n\nDo you want to restart now?",
+                "Settings Saved - Restart Required", 
+                System.Windows.MessageBoxButton.YesNo, 
+                System.Windows.MessageBoxImage.Information);
+            
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                // Close the entire application
+                System.Windows.Application.Current.Shutdown();
+            }
         }
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show($"Error saving API settings: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private void SaveUISettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_userSettingsService != null && UILanguageComboBox.SelectedItem is ComboBoxItem selectedItem)
+            {
+                var languageCode = selectedItem.Tag?.ToString() ?? "en-US";
+                _userSettingsService.UILanguage = languageCode;
+                LocalizationService.Instance.SetLanguage(languageCode);
+                
+                // Update UI strings immediately
+                UpdateUIStrings();
+                
+                System.Windows.MessageBox.Show(LocalizationService.Instance.GetString("Message_SettingsSaved"), 
+                    LocalizationService.Instance.GetString("Window_Settings"), 
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Error saving UI settings: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private void SaveOcrSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_userSettingsService != null)
+            {
+                _userSettingsService.EnableTraditionalChinese = TraditionalChineseCheckBox.IsChecked == true;
+                System.Windows.MessageBox.Show("OCR settings saved successfully. The Traditional Chinese language support will be used for new indexing operations.", 
+                    "Settings Saved", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Error saving OCR settings: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
     }
 
@@ -208,8 +425,19 @@ public partial class SettingsWindow : Window
             SaveConfigValue("Indexing:MaxConcurrentFiles", maxFiles.ToString());
             SaveConfigValue("Indexing:MaxConcurrentPdfs", maxPdfs.ToString());
 
-            System.Windows.MessageBox.Show("Indexing settings saved successfully. Restart the application for changes to take effect.", 
-                "Settings Saved", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            _apiSettingsRequireRestart = true;
+            
+            var result = System.Windows.MessageBox.Show(
+                "Indexing settings saved successfully. The application needs to restart for changes to take effect.\n\nDo you want to restart now?",
+                "Settings Saved - Restart Required", 
+                System.Windows.MessageBoxButton.YesNo, 
+                System.Windows.MessageBoxImage.Information);
+            
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                // Close the entire application
+                System.Windows.Application.Current.Shutdown();
+            }
         }
         catch (Exception ex)
         {
@@ -302,13 +530,13 @@ public partial class SettingsWindow : Window
         {
             ConsoleLogBorder.Visibility = Visibility.Collapsed;
             ConsoleLogRow.Height = new GridLength(0);
-            ConsoleLogToggleButton.Content = "Show Console Log";
+            ConsoleLogToggleButton.Content = LocalizationService.Instance.GetString("Button_ShowConsoleLog");
         }
         else
         {
             ConsoleLogBorder.Visibility = Visibility.Visible;
             ConsoleLogRow.Height = new GridLength(300);
-            ConsoleLogToggleButton.Content = "Hide Console Log";
+            ConsoleLogToggleButton.Content = LocalizationService.Instance.GetString("Button_HideConsoleLog");
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 ConsoleScrollViewer.ScrollToEnd();
@@ -387,9 +615,54 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void SaveProfileSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_userSettingsService != null)
+            {
+                _userSettingsService.Nickname = NicknameTextBox.Text.Trim();
+                System.Windows.MessageBox.Show("Profile settings saved successfully.", 
+                    "Settings Saved", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("User settings service is not available.", 
+                    "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Error saving profile settings: {ex.Message}", 
+                "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        // If API settings require restart, close the entire application
+        if (_apiSettingsRequireRestart)
+        {
+            System.Windows.Application.Current.Shutdown();
+        }
+        else
+        {
+            Close();
+        }
+    }
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        // If API settings require restart, close the entire application
+        if (_apiSettingsRequireRestart)
+        {
+            e.Cancel = true; // Cancel the window close
+            System.Windows.Application.Current.Shutdown(); // Close entire application instead
+        }
+        else
+        {
+            base.OnClosing(e);
+        }
     }
 
     private class ConsoleLogWriter : TextWriter

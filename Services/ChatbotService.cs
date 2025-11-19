@@ -14,11 +14,13 @@ public class ChatbotService : IChatbotService
     private readonly bool _useLocalhost;
     private readonly string _localhostUrl;
     private readonly ILogger<ChatbotService> _logger;
+    private readonly UserSettingsService? _userSettingsService;
     private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-    public ChatbotService(IConfiguration configuration, ILogger<ChatbotService> logger)
+    public ChatbotService(IConfiguration configuration, ILogger<ChatbotService> logger, UserSettingsService? userSettingsService = null)
     {
         _logger = logger;
+        _userSettingsService = userSettingsService;
         _useLocalhost = configuration["Gemini:UseLocalhost"]?.ToLower() == "true";
         _localhostUrl = configuration["Gemini:LocalhostUrl"] ?? "http://localhost:11434";
         
@@ -101,29 +103,146 @@ public class ChatbotService : IChatbotService
 
         var lowerQuery = query.ToLower();
         
-        // File search keywords
+        // File search keywords (English and Chinese)
         var searchKeywords = new[]
         {
             "find", "search", "look for", "file", "document", "where is", "show me",
             "locate", "get", "retrieve", "open", "contains", "mention", "about",
-            "related to", "regarding", "pertaining to", "concerning"
+            "related to", "regarding", "pertaining to", "concerning",
+            "找", "搜索", "查找", "文件", "文档", "在哪里", "显示", "打开",
+            "包含", "关于", "相关", "提到"
         };
 
-        // Greetings and casual conversation keywords
+        // Greetings and casual conversation keywords (English and Chinese)
         var casualKeywords = new[]
         {
             "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
             "how are you", "what's up", "thanks", "thank you", "bye", "goodbye",
-            "what can you do", "help", "who are you", "what is your name"
+            "what can you do", "help", "who are you", "what is your name",
+            "what's my name", "my name", "what am i called", "do you know my name",
+            "can we chat", "can i chat", "chat with", "talk with", "conversation",
+            "你好", "您好", "早上好", "下午好", "晚上好", "谢谢", "再见", "拜拜",
+            "你能做什么", "帮助", "你是谁", "你叫什么名字", "怎么样",
+            "我叫什么", "我的名字", "你知道我的名字", "我的名字是什么", "我叫什么名",
+            "聊天", "可以聊天", "跟你聊天", "和你聊天", "能聊天", "聊一下", "聊一聊",
+            "可以跟你聊天吗", "可以和你聊天吗", "能跟你聊天吗", "能和你聊天吗"
         };
+
+        // Work week query keywords (English and Chinese)
+        var workWeekKeywords = new[]
+        {
+            "work week", "week number", "what week", "current week", "this week", "week of",
+            "工作周", "第几周", "本周", "这周", "星期", "周数", "今天是第几周", "现在是第几周"
+        };
+
+        // Check for work week queries first
+        if (workWeekKeywords.Any(keyword => lowerQuery.Contains(keyword)))
+            return false;
 
         // Check for casual conversation first
         if (casualKeywords.Any(keyword => lowerQuery.Contains(keyword)))
             return false;
 
-        // Check for file search intent
-        return searchKeywords.Any(keyword => lowerQuery.Contains(keyword)) ||
-               lowerQuery.Length > 3; // Default to search for longer queries
+        // Check for file search intent - only return true if explicit search keywords are found
+        // Default to casual conversation if no search keywords are present
+        return searchKeywords.Any(keyword => lowerQuery.Contains(keyword));
+    }
+
+    private bool IsITToolsQuery(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return false;
+
+        var lowerQuery = query.ToLower();
+        
+        // IT Tools query keywords (English and Chinese)
+        var itToolsKeywords = new[]
+        {
+            "it tools", "it user tools", "it technology tools", "user tools",
+            "directory to it tools", "it tools path", "it tools directory",
+            "where is it tools", "it tools location", "it tools folder",
+            "new user setup", "user setup", "setup", "new user", "user setup tools",
+            "IT工具", "IT用户工具", "IT技术工具", "用户工具", "IT工具路径", "IT工具目录",
+            "IT工具在哪里", "IT工具位置", "IT工具文件夹", "新用户设置", "用户设置", "设置"
+        };
+
+        return itToolsKeywords.Any(keyword => lowerQuery.Contains(keyword));
+    }
+
+    private string GetITToolsPath()
+    {
+        return "The IT User tools directory is located at:\n\n" +
+               "\\\\10.0.42.100\\Public area\\IT Technology\\User tools\n\n" +
+               "You can access this network path directly to find IT tools and utilities.";
+    }
+
+    private bool IsWorkWeekQuery(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return false;
+
+        var lowerQuery = query.ToLower();
+        var workWeekKeywords = new[]
+        {
+            "work week", "week number", "what week", "current week", "this week", "week of",
+            "工作周", "第几周", "本周", "这周", "星期", "周数", "今天是第几周", "现在是第几周"
+        };
+
+        return workWeekKeywords.Any(keyword => lowerQuery.Contains(keyword));
+    }
+
+    private string GetWorkWeekInfo()
+    {
+        var today = DateTime.Now;
+        var year = today.Year;
+        
+        // Calculate ISO 8601 week number (week starts on Monday, week 1 contains Jan 4)
+        // Get the date of the Thursday of the current week
+        var daysUntilThursday = ((int)DayOfWeek.Thursday - (int)today.DayOfWeek + 7) % 7;
+        var thursday = today.AddDays(daysUntilThursday);
+        
+        // Week 1 is the week that contains January 4th
+        var jan4 = new DateTime(year, 1, 4);
+        var jan4Thursday = jan4.AddDays(((int)DayOfWeek.Thursday - (int)jan4.DayOfWeek + 7) % 7);
+        
+        // Calculate week number
+        var weekNumber = ((thursday - jan4Thursday).Days / 7) + 1;
+        
+        // Handle year boundaries
+        if (weekNumber < 1)
+        {
+            // This week belongs to the previous year
+            year = year - 1;
+            var prevJan4 = new DateTime(year, 1, 4);
+            var prevJan4Thursday = prevJan4.AddDays(((int)DayOfWeek.Thursday - (int)prevJan4.DayOfWeek + 7) % 7);
+            weekNumber = ((thursday - prevJan4Thursday).Days / 7) + 1;
+        }
+        else if (weekNumber > 52)
+        {
+            // Check if this week belongs to next year
+            var nextJan4 = new DateTime(year + 1, 1, 4);
+            var nextJan4Thursday = nextJan4.AddDays(((int)DayOfWeek.Thursday - (int)nextJan4.DayOfWeek + 7) % 7);
+            if (thursday >= nextJan4Thursday)
+            {
+                year = year + 1;
+                weekNumber = ((thursday - nextJan4Thursday).Days / 7) + 1;
+            }
+        }
+        
+        // Calculate the start and end of the current week (Monday to Sunday)
+        var daysSinceMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        var weekStart = today.AddDays(-daysSinceMonday);
+        var weekEnd = weekStart.AddDays(6);
+        
+        // Return bilingual response - the AI will detect the language from the query
+        return $"Today is in **Week {weekNumber}** of {year}.\n\n" +
+               $"**Week {weekNumber} Date Range:**\n" +
+               $"{weekStart:MMMM dd, yyyy} - {weekEnd:MMMM dd, yyyy}\n\n" +
+               $"Today's date: {today:MMMM dd, yyyy}\n\n" +
+               $"今天是{year}年的第{weekNumber}周。\n\n" +
+               $"**第{weekNumber}周日期范围：**\n" +
+               $"{weekStart:yyyy年MM月dd日} - {weekEnd:yyyy年MM月dd日}\n\n" +
+               $"今天的日期：{today:yyyy年MM月dd日}";
     }
 
     private async Task<string> GetGeminiResponseAsync(string prompt)
@@ -372,13 +491,49 @@ public class ChatbotService : IChatbotService
     {
         try
         {
+            // Check for IT Tools queries first (return path directly, no API call)
+            if (IsITToolsQuery(query))
+            {
+                return GetITToolsPath();
+            }
+
+            // Check for work week queries
+            if (IsWorkWeekQuery(query))
+            {
+                return GetWorkWeekInfo();
+            }
+
             var contextBuilder = new StringBuilder();
             
+            // Get user nickname if available
+            var nickname = _userSettingsService?.Nickname;
+            var userName = !string.IsNullOrWhiteSpace(nickname) ? nickname : "User";
+            
             // System identity for casual conversation
-            var systemPrompt = "You are Erin, an AI assistant trained by Linktel staff to assist Linktel employees. " +
+            var systemPrompt = "You are Erin, an AI Agent trained by Linktel staff to assist Linktel employees. " +
                               "You are friendly, helpful, and conversational. " +
                               "You can help with file search when asked, but you're also happy to have casual conversations. " +
                               "Be natural, personable, and concise.\n\n" +
+                              "IMPORTANT - DO NOT include files or search results in your response unless the user explicitly asks for files or documents. " +
+                              "For casual conversation, just respond conversationally without mentioning or attaching any files.\n\n" +
+                              "IMPORTANT NETWORK PATH KNOWLEDGE:\n" +
+                              "- When users ask for 'IT User tools', 'directory to IT User tools', 'IT tools path', or similar queries, " +
+                              "you should provide this network path: \\\\10.0.42.100\\Public area\\IT Technology\\User tools\n" +
+                              "- This is a highly used path for accessing IT tools and utilities\n" +
+                              "- You can provide this path directly when asked about IT User tools or IT Technology tools\n\n" +
+                              "IMPORTANT LANGUAGE SUPPORT:\n" +
+                              "- You understand and can communicate in BOTH English and Chinese (中文)\n" +
+                              "- Always respond in the SAME language the user uses\n" +
+                              "- If the user writes in Chinese, respond in Chinese\n" +
+                              "- If the user writes in English, respond in English\n" +
+                              "- You can seamlessly switch between languages based on the user's preference\n\n" +
+                              (!string.IsNullOrWhiteSpace(nickname) 
+                                  ? $"IMPORTANT - USER INFORMATION:\n" +
+                                    $"- The user's name is {nickname}. This is stored in the system settings, NOT in any files.\n" +
+                                    $"- When the user asks about their name (e.g., 'What's my name?' or '我叫什么名'), you should respond directly with: '{nickname}'\n" +
+                                    $"- DO NOT search through files for the user's name - it is stored in system settings.\n" +
+                                    $"- Use their name naturally in conversation when appropriate.\n\n" 
+                                  : "NOTE: The user has not set a nickname in their profile settings.\n\n") +
                               "CRITICAL FORMATTING RULES:\n" +
                               "- ALWAYS use double line breaks (\\n\\n) between different topics or sections\n" +
                               "- When listing steps (Step 1, Step 2, etc.), put each step on a NEW LINE with a double line break before it\n" +
@@ -406,7 +561,7 @@ public class ChatbotService : IChatbotService
                     {
                         if (msg != null && !string.IsNullOrWhiteSpace(msg.Content))
                         {
-                            var speaker = msg.IsUser ? "User" : "Erin";
+                            var speaker = msg.IsUser ? userName : "Erin";
                             contextBuilder.AppendLine($"{speaker}: {msg.Content}");
                         }
                     }
@@ -414,7 +569,7 @@ public class ChatbotService : IChatbotService
                 }
             }
 
-            var prompt = $"{contextBuilder}\nUser: {query}\n\nErin:";
+            var prompt = $"{contextBuilder}\n{userName}: {query}\n\nErin:";
 
             return await GetGeminiResponseAsync(prompt);
         }
@@ -435,6 +590,17 @@ public class ChatbotService : IChatbotService
             
             // System identity and instructions (shortened for faster processing)
             var systemPrompt = "You are Erin, an AI assistant for Linktel employees. Be friendly, concise, and accurate.\n\n" +
+                              "IMPORTANT NETWORK PATH KNOWLEDGE:\n" +
+                              "- When users ask for 'IT User tools', 'directory to IT User tools', 'IT tools path', or similar queries, " +
+                              "you should provide this network path: \\\\10.0.42.100\\Public area\\IT Technology\\User tools\n" +
+                              "- This is a highly used path for accessing IT tools and utilities\n" +
+                              "- You can provide this path directly when asked about IT User tools or IT Technology tools\n\n" +
+                              "IMPORTANT LANGUAGE SUPPORT:\n" +
+                              "- You understand and can communicate in BOTH English and Chinese (中文)\n" +
+                              "- Always respond in the SAME language the user uses\n" +
+                              "- If the user writes in Chinese, respond in Chinese\n" +
+                              "- If the user writes in English, respond in English\n" +
+                              "- You can seamlessly switch between languages based on the user's preference\n\n" +
                               "CRITICAL FORMATTING RULES:\n" +
                               "- ALWAYS use double line breaks (\\n\\n) between different topics or sections\n" +
                               "- When listing steps (Step 1, Step 2, etc.), put each step on a NEW LINE with a double line break before it\n" +
@@ -446,10 +612,10 @@ public class ChatbotService : IChatbotService
                               "CONTENT RULES:\n" +
                               "1. ONLY use information EXPLICITLY in the files below.\n" +
                               "2. DO NOT invent or assume information.\n" +
-                              "3. If information isn't in files, say 'I don't have that information in the indexed files.'\n" +
+                              "3. If information isn't in files, say 'I don't have that information in the indexed files.' (English) or '我在索引文件中没有找到该信息。' (Chinese)\n" +
                               "4. Always mention which file contains the information.\n" +
-                              "5. For file type questions (e.g., 'list PDFs'), list ALL files of that type shown below, even if content is empty.\n" +
-                              "6. At the end, list relevant files: 'Relevant Files: [File Name] - [explanation]'\n";
+                              "5. For file type questions (e.g., 'list PDFs' or '列出PDF文件'), list ALL files of that type shown below, even if content is empty.\n" +
+                              "6. At the end, list relevant files: 'Relevant Files: [File Name] - [explanation]' (English) or '相关文件：[文件名] - [说明]' (Chinese)\n";
             
             contextBuilder.AppendLine(systemPrompt);
             contextBuilder.AppendLine();

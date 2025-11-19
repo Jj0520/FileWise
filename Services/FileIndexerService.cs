@@ -1,5 +1,6 @@
 using System.IO;
 using FileWise.Models;
+using FileWise.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -35,10 +36,19 @@ public class FileIndexerService : IFileIndexerService
 
     public async Task IndexFolderAsync(string folderPath, Action<double>? progressCallback = null, Action<string>? statusCallback = null)
     {
-        var files = GetSupportedFiles(folderPath);
+        try
+        {
+            statusCallback?.Invoke("Scanning folder for files...");
+            _logger.LogInformation("Starting to index folder: {FolderPath}", folderPath);
+            Console.WriteLine($"📁 Starting to index folder: {folderPath}");
+            
+            // Run the expensive folder scan on a background thread so the UI can continue rendering
+            var files = await Task.Run(() => GetSupportedFiles(folderPath));
         var totalFiles = files.Count;
         var processedFiles = 0;
 
+            _logger.LogInformation("Found {FileCount} files to index in {FolderPath}", totalFiles, folderPath);
+            Console.WriteLine($"📊 Found {totalFiles} files to index");
         statusCallback?.Invoke($"Found {totalFiles} files to index");
 
         // Separate PDFs from other files - PDFs are slower and need more time
@@ -66,6 +76,59 @@ public class FileIndexerService : IFileIndexerService
         }
 
         await Task.WhenAll(allTasks);
+            
+            _logger.LogInformation("Completed indexing folder: {FolderPath}, processed {ProcessedFiles}/{TotalFiles} files", 
+                folderPath, processedFiles, totalFiles);
+            Console.WriteLine($"✅ Completed indexing: {processedFiles}/{totalFiles} files processed");
+            statusCallback?.Invoke($"Indexed {processedFiles}/{totalFiles} files");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in IndexFolderAsync for {FolderPath}", folderPath);
+            Console.WriteLine($"❌ Error indexing folder {folderPath}: {ex.Message}");
+            statusCallback?.Invoke($"Error: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task IndexFilesAsync(List<string> filePaths, Action<double>? progressCallback = null, Action<string>? statusCallback = null)
+    {
+        if (filePaths == null || !filePaths.Any())
+        {
+            statusCallback?.Invoke("No files to index");
+            return;
+        }
+
+        var totalFiles = filePaths.Count;
+        _processedFiles = 0; // Reset counter
+
+        statusCallback?.Invoke($"Indexing {totalFiles} file(s)...");
+
+        // Separate PDFs from other files
+        var pdfFiles = filePaths.Where(f => Path.GetExtension(f).Equals(".pdf", StringComparison.OrdinalIgnoreCase)).ToList();
+        var otherFiles = filePaths.Where(f => !Path.GetExtension(f).Equals(".pdf", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        // Process PDFs with lower concurrency
+        var pdfSemaphore = new SemaphoreSlim(_maxConcurrentPdfs);
+        // Process other files with normal concurrency
+        var otherSemaphore = new SemaphoreSlim(_maxConcurrentFiles);
+
+        var allTasks = new List<Task>();
+
+        // Process PDFs
+        foreach (var file in pdfFiles)
+        {
+            allTasks.Add(ProcessFileWithSemaphoreAsync(file, pdfSemaphore, totalFiles, progressCallback, statusCallback));
+        }
+
+        // Process other files
+        foreach (var file in otherFiles)
+        {
+            allTasks.Add(ProcessFileWithSemaphoreAsync(file, otherSemaphore, totalFiles, progressCallback, statusCallback));
+        }
+
+        await Task.WhenAll(allTasks);
+        statusCallback?.Invoke($"Indexed {totalFiles} file(s)");
     }
 
     private async Task ProcessFileWithSemaphoreAsync(
@@ -126,7 +189,25 @@ public class FileIndexerService : IFileIndexerService
         var files = new List<string>();
         try
         {
-            foreach (var file in Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories))
+            // Check if it's a network path
+            bool isNetworkPath = folderPath.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase);
+            
+            _logger.LogInformation("Scanning folder: {FolderPath} (Network: {IsNetwork})", folderPath, isNetworkPath);
+            Console.WriteLine($"🔍 Scanning folder: {folderPath} (Network: {isNetworkPath})");
+            
+            if (isNetworkPath)
+            {
+                // For network paths, use recursive directory traversal with better error handling
+                _logger.LogInformation("Using recursive scan for network path");
+                Console.WriteLine("🌐 Using recursive scan for network path");
+                GetSupportedFilesRecursive(folderPath, files, isNetworkPath);
+            }
+            else
+            {
+                // For local paths, use the faster Directory.GetFiles
+                _logger.LogInformation("Using fast Directory.GetFiles for local path");
+                Console.WriteLine("💾 Using fast scan for local path");
+                foreach (var file in Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories))
             {
                 var extension = Path.GetExtension(file).ToLower();
                 if (SupportedExtensions.Contains(extension))
@@ -134,19 +215,161 @@ public class FileIndexerService : IFileIndexerService
                     files.Add(file);
                 }
             }
+            }
+            
+            _logger.LogInformation("Found {FileCount} supported files in {FolderPath}", files.Count, folderPath);
+            Console.WriteLine($"✅ Found {files.Count} supported files");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error scanning folder: {FolderPath}", folderPath);
+            Console.WriteLine($"❌ Error scanning folder: {ex.Message}");
         }
         return files;
+    }
+
+    private void GetSupportedFilesRecursive(string folderPath, List<string> files, bool isNetworkPath, int depth = 0)
+    {
+        // Prevent infinite recursion and skip system folders
+        if (depth > 100) 
+        {
+            _logger.LogWarning("Max depth reached for: {FolderPath}", folderPath);
+            return;
+        }
+        
+        // Skip system folders that commonly cause issues on network shares
+        var folderName = Path.GetFileName(folderPath)?.ToLower() ?? "";
+        if (folderName == "#recycle" || 
+            folderName == "$recycle.bin" || 
+            folderName == "system volume information" ||
+            folderName == "recycler" ||
+            folderName.StartsWith("$"))
+        {
+            _logger.LogInformation("Skipping system folder: {FolderPath}", folderPath);
+            Console.WriteLine($"⏭️ Skipping system folder: {folderName}");
+            return;
+        }
+        
+        if (depth == 0)
+        {
+            Console.WriteLine($"📂 Starting recursive scan from: {folderPath}");
+        }
+
+        try
+        {
+            // Get files in current directory
+            string[] currentFiles;
+            try
+            {
+                currentFiles = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                _logger.LogWarning("Access denied to folder: {FolderPath}", folderPath);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                _logger.LogWarning("Directory not found: {FolderPath}", folderPath);
+                return;
+            }
+            catch (IOException ex)
+            {
+                // Network errors - log but continue
+                _logger.LogWarning(ex, "Network error accessing folder: {FolderPath}", folderPath);
+                return;
+            }
+
+            foreach (var file in currentFiles)
+            {
+                try
+                {
+                    var extension = Path.GetExtension(file).ToLower();
+                    if (SupportedExtensions.Contains(extension))
+                    {
+                        files.Add(file);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error processing file: {FilePath}", file);
+                }
+            }
+
+            // Recursively process subdirectories
+            string[] subdirectories;
+            try
+            {
+                subdirectories = Directory.GetDirectories(folderPath);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                _logger.LogWarning("Access denied to subdirectories in: {FolderPath}", folderPath);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return;
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Network error accessing subdirectories in: {FolderPath}", folderPath);
+                return;
+            }
+
+            foreach (var subdirectory in subdirectories)
+            {
+                try
+                {
+                    GetSupportedFilesRecursive(subdirectory, files, isNetworkPath, depth + 1);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error processing subdirectory: {Subdirectory}", subdirectory);
+                    // Continue with other subdirectories
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in recursive file scan: {FolderPath}", folderPath);
+        }
     }
 
     private async Task ProcessFileAsync(string filePath, bool forceReindex = false)
     {
         try
         {
-            var fileInfo = new FileInfo(filePath);
+            // For network files, add retry logic
+            FileInfo? fileInfo = null;
+            int retries = 3;
+            for (int i = 0; i < retries; i++)
+            {
+                try
+                {
+                    fileInfo = new FileInfo(filePath);
+                    // Try to access a property to ensure file is accessible
+                    _ = fileInfo.Length;
+                    break; // Success, exit retry loop
+                }
+                catch (IOException ex) when (i < retries - 1 && filePath.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(ex, "Network error accessing file (attempt {Attempt}/{Retries}): {FilePath}", i + 1, retries, filePath);
+                    await Task.Delay(1000 * (i + 1)); // Exponential backoff: 1s, 2s, 3s
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    _logger.LogWarning("Access denied to file: {FilePath}", filePath);
+                    return;
+                }
+            }
+
+            if (fileInfo == null)
+            {
+                _logger.LogError("Failed to access file after {Retries} attempts: {FilePath}", retries, filePath);
+                return;
+            }
+
             var hash = _textExtractor.ComputeFileHash(filePath);
 
             // Check if file already indexed with same hash (skip if forceReindex is false)
@@ -248,38 +471,96 @@ public class FileIndexerService : IFileIndexerService
             }
             else
             {
-                // Check if file might be encrypted
-                bool mightBeEncrypted = false;
-                if (fileExtension.Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+                // Check encryption type to provide more specific messages
+                bool isEfsEncrypted = FileEncryptionHelper.IsEfsEncrypted(filePath);
+                bool isPdfPasswordEncrypted = fileExtension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) 
+                    && FileEncryptionHelper.IsPdfPasswordEncrypted(filePath);
+                bool isWpsEncrypted = FileEncryptionHelper.IsWpsOfficeEncrypted(filePath);
+                bool canReadFile = FileEncryptionHelper.CanReadFile(filePath);
+                
+                string warningMsg;
+                
+                // Handle WPS Office encryption (most specific case first)
+                if (isWpsEncrypted)
                 {
-                    try
+                    if (isEfsEncrypted && isPdfPasswordEncrypted)
                     {
-                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                        {
-                            var buffer = new byte[Math.Min(1024, (int)fileInfo.Length)];
-                            var bytesRead = fs.Read(buffer, 0, buffer.Length);
-                            var bufferStr = System.Text.Encoding.ASCII.GetString(buffer, 0, bytesRead).ToLower();
-                            
-                            if (bufferStr.Contains("encrypt") || bufferStr.Contains("password") || 
-                                bufferStr.Contains("security") || bufferStr.Contains("/encrypt"))
-                            {
-                                mightBeEncrypted = true;
+                        warningMsg = $"🔒 WPS Office / Kingsoft Office Encrypted file (also has EFS + PDF password): {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"WPS Office uses proprietary encryption that prevents content extraction. " +
+                                   $"Solution: Open in WPS Office, remove encryption/password, and re-export as a standard PDF. " +
+                                   $"File metadata indexed but no content extracted. File will still appear in search results by filename.";
+                    }
+                    else if (isEfsEncrypted)
+                    {
+                        warningMsg = $"🔒 WPS Office / Kingsoft Office Encrypted file (also has EFS): {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"WPS Office uses proprietary encryption that prevents content extraction. " +
+                                   $"EFS decryption works automatically, but WPS encryption still blocks content. " +
+                                   $"Solution: Open in WPS Office, remove encryption, and re-export as a standard PDF. " +
+                                   $"File metadata indexed but no content extracted.";
+                    }
+                    else if (isPdfPasswordEncrypted)
+                    {
+                        warningMsg = $"🔒 WPS Office / Kingsoft Office Encrypted file (also has PDF password): {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"WPS Office uses proprietary encryption that prevents content extraction. " +
+                                   $"Solution: Open in WPS Office, remove encryption/password, and re-export as a standard PDF. " +
+                                   $"File metadata indexed but no content extracted. File will still appear in search results by filename.";
+                    }
+                    else
+                    {
+                        warningMsg = $"🔒 WPS Office / Kingsoft Office Encrypted file: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"WPS Office uses proprietary encryption that prevents content extraction. " +
+                                   $"Solution: Open in WPS Office, remove encryption, and re-export as a standard PDF. " +
+                                   $"File metadata indexed but no content extracted. File will still appear in search results by filename.";
                             }
                         }
-                    }
-                    catch
+                else if (isEfsEncrypted && isPdfPasswordEncrypted)
                     {
-                        // If we can't read, might be encrypted
-                        mightBeEncrypted = true;
+                    // Both EFS and PDF password encryption
+                    if (canReadFile)
+                    {
+                        warningMsg = $"🔒 File has Windows EFS + PDF Password Encryption: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"EFS decryption works automatically, but PDF password encryption prevents content extraction. " +
+                                   $"File metadata indexed but no content extracted. File will still appear in search results by filename.";
+                    }
+                    else
+                    {
+                        warningMsg = $"🔒 File has Windows EFS + PDF Password Encryption: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"Cannot read file - may need to run under the same user account that encrypted it. " +
+                                   $"File metadata indexed but no content extracted.";
                     }
                 }
-                
-                var warningMsg = mightBeEncrypted
-                    ? $"🔒 Encrypted file detected: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
-                      $"File metadata indexed but no content extracted. File will still appear in search results by filename."
-                    : $"No text extracted from: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                else if (isEfsEncrypted)
+                {
+                    // EFS only - should work automatically
+                    if (canReadFile)
+                    {
+                        warningMsg = $"🔒 Windows EFS-encrypted file: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"EFS decryption works automatically under the same user account. " +
+                                   $"No text extracted - file may be empty, corrupted, or in an unsupported format. " +
+                                   $"File metadata indexed but no embeddings created. Extracted text length: {text?.Length ?? 0}";
+                    }
+                    else
+                    {
+                        warningMsg = $"🔒 Windows EFS-encrypted file: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                                   $"Cannot read file - ensure the application is running under the same user account that encrypted the file. " +
+                                   $"File metadata indexed but no content extracted.";
+                    }
+                }
+                else if (isPdfPasswordEncrypted)
+                {
+                    // PDF password encryption only
+                    warningMsg = $"🔒 PDF Password-encrypted file: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
+                               $"PDF password encryption prevents content extraction without the password. " +
+                               $"File metadata indexed but no content extracted. File will still appear in search results by filename.";
+                }
+                else
+                {
+                    // No encryption detected, but no text extracted
+                    warningMsg = $"No text extracted from: {filePath} (FileType: {fileInfo.Extension}, Size: {fileInfo.Length} bytes). " +
                                $"File metadata indexed but no embeddings created. " +
                                $"Extracted text length: {text?.Length ?? 0}";
+                }
+                
                 _logger.LogWarning(warningMsg);
                 System.Diagnostics.Debug.WriteLine(warningMsg);
                 Console.WriteLine($"⚠️ {warningMsg}");
@@ -294,4 +575,8 @@ public class FileIndexerService : IFileIndexerService
         }
     }
 }
+
+
+
+
 

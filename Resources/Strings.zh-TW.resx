@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Menu_File" xml:space="preserve">
+    <value>檔案</value>
+  </data>
+  <data name="Menu_Edit" xml:space="preserve">
+    <value>編輯</value>
+  </data>
+  <data name="Menu_CompressPDF" xml:space="preserve">
+    <value>壓縮 PDF...</value>
+  </data>
+  <data name="Menu_Exit" xml:space="preserve">
+    <value>結束</value>
+  </data>
+  <data name="Menu_Undo" xml:space="preserve">
+    <value>復原</value>
+  </data>
+  <data name="Menu_Redo" xml:space="preserve">
+    <value>重做</value>
+  </data>
+  <data name="Menu_Cut" xml:space="preserve">
+    <value>剪下</value>
+  </data>
+  <data name="Menu_Copy" xml:space="preserve">
+    <value>複製</value>
+  </data>
+  <data name="Menu_Paste" xml:space="preserve">
+    <value>貼上</value>
+  </data>
+  <data name="Menu_Find" xml:space="preserve">
+    <value>尋找</value>
+  </data>
+  <data name="Button_Search" xml:space="preserve">
+    <value>搜尋</value>
+  </data>
+  <data name="Label_FolderSelection" xml:space="preserve">
+    <value>資料夾選擇</value>
+  </data>
+  <data name="Button_SelectFolder" xml:space="preserve">
+    <value>選擇資料夾</value>
+  </data>
+  <data name="Window_Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Settings_OCR_Language" xml:space="preserve">
+    <value>OCR 語言支援</value>
+  </data>
+  <data name="Settings_OCR_TraditionalChinese" xml:space="preserve">
+    <value>啟用繁體中文 OCR</value>
+  </data>
+  <data name="Settings_OCR_Description" xml:space="preserve">
+    <value>啟用後，OCR 將識別英文和繁體中文文字。需要在 tessdata 資料夾中包含 chi_tra.traineddata。</value>
+  </data>
+  <data name="Settings_UI_Language" xml:space="preserve">
+    <value>介面語言</value>
+  </data>
+  <data name="Settings_UI_Language_English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Settings_UI_Language_TraditionalChinese" xml:space="preserve">
+    <value>繁體中文</value>
+  </data>
+  <data name="Button_Save" xml:space="preserve">
+    <value>儲存</value>
+  </data>
+  <data name="Button_Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="Button_SaveOCRSettings" xml:space="preserve">
+    <value>儲存 OCR 設定</value>
+  </data>
+  <data name="Button_SaveUISettings" xml:space="preserve">
+    <value>儲存介面設定</value>
+  </data>
+  <data name="Message_SettingsSaved" xml:space="preserve">
+    <value>設定已儲存。請重新啟動應用程式以使語言變更生效。</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Settings_API_Configuration" xml:space="preserve">
+    <value>API 設定</value>
+  </data>
+  <data name="Settings_API_Mode" xml:space="preserve">
+    <value>API 模式</value>
+  </data>
+  <data name="Settings_API_Mode_ApiKey" xml:space="preserve">
+    <value>使用 API 金鑰 (Gemini 雲端)</value>
+  </data>
+  <data name="Settings_API_Mode_Localhost" xml:space="preserve">
+    <value>使用本機伺服器 (本地模型)</value>
+  </data>
+  <data name="Settings_API_Key" xml:space="preserve">
+    <value>API 金鑰</value>
+  </data>
+  <data name="Settings_API_Key_Description" xml:space="preserve">
+    <value>您的 Gemini API 金鑰已安全儲存。請從 https://aistudio.google.com/app/apikey 取得您的金鑰</value>
+  </data>
+  <data name="Settings_Localhost_URL" xml:space="preserve">
+    <value>本機伺服器 URL</value>
+  </data>
+  <data name="Settings_Localhost_URL_Description" xml:space="preserve">
+    <value>您的本地模型伺服器 URL (例如：http://localhost:11434 用於 Ollama)</value>
+  </data>
+  <data name="Button_SaveAPISettings" xml:space="preserve">
+    <value>儲存 API 設定</value>
+  </data>
+  <data name="Settings_User_Profile" xml:space="preserve">
+    <value>使用者個人資料</value>
+  </data>
+  <data name="Settings_Nickname" xml:space="preserve">
+    <value>暱稱</value>
+  </data>
+  <data name="Settings_Nickname_Description" xml:space="preserve">
+    <value>輸入您的暱稱。AI 會記住並在對話中使用它。</value>
+  </data>
+  <data name="Button_SaveProfileSettings" xml:space="preserve">
+    <value>儲存個人資料設定</value>
+  </data>
+  <data name="Settings_Appearance" xml:space="preserve">
+    <value>外觀</value>
+  </data>
+  <data name="Settings_Appearance_Description" xml:space="preserve">
+    <value>選擇 FileWise 的外觀。主題變更會立即生效。</value>
+  </data>
+  <data name="Settings_Theme_Light" xml:space="preserve">
+    <value>淺色主題</value>
+  </data>
+  <data name="Settings_Theme_Dark" xml:space="preserve">
+    <value>深色主題</value>
+  </data>
+  <data name="Settings_Theme_System" xml:space="preserve">
+    <value>跟隨系統主題</value>
+  </data>
+  <data name="Settings_Theme_Tip" xml:space="preserve">
+    <value>提示：選擇「跟隨系統」可在 Windows 在淺色和深色模式之間切換時自動切換。</value>
+  </data>
+  <data name="Settings_UI_Language_Description" xml:space="preserve">
+    <value>變更介面語言。請重新啟動應用程式以使變更生效。</value>
+  </data>
+  <data name="Settings_Indexing" xml:space="preserve">
+    <value>索引設定</value>
+  </data>
+  <data name="Settings_Indexing_ChunkSize" xml:space="preserve">
+    <value>區塊大小</value>
+  </data>
+  <data name="Settings_Indexing_ChunkSize_Description" xml:space="preserve">
+    <value>索引的文字區塊大小 (預設：1000 字元)</value>
+  </data>
+  <data name="Settings_Indexing_MaxConcurrentFiles" xml:space="preserve">
+    <value>最大同時處理檔案數</value>
+  </data>
+  <data name="Settings_Indexing_MaxConcurrentFiles_Description" xml:space="preserve">
+    <value>同時處理的最大檔案數 (預設：5)</value>
+  </data>
+  <data name="Settings_Indexing_MaxConcurrentPdfs" xml:space="preserve">
+    <value>最大同時處理 PDF 數</value>
+  </data>
+  <data name="Settings_Indexing_MaxConcurrentPdfs_Description" xml:space="preserve">
+    <value>同時處理的最大 PDF 數 (預設：2)</value>
+  </data>
+  <data name="Button_SaveIndexingSettings" xml:space="preserve">
+    <value>儲存索引設定</value>
+  </data>
+  <data name="Button_ShowConsoleLog" xml:space="preserve">
+    <value>顯示控制台日誌</value>
+  </data>
+  <data name="Button_HideConsoleLog" xml:space="preserve">
+    <value>隱藏控制台日誌</value>
+  </data>
+  <data name="Button_Sort_Name" xml:space="preserve">
+    <value>名稱</value>
+  </data>
+  <data name="Button_Sort_Type" xml:space="preserve">
+    <value>類型</value>
+  </data>
+  <data name="Button_Sort_Size" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="Button_Sort_Date" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="Status_Ready" xml:space="preserve">
+    <value>就緒</value>
+  </data>
+  <data name="Status_CheckingFiles" xml:space="preserve">
+    <value>檢查檔案中...</value>
+  </data>
+  <data name="Status_NoFolderSelected" xml:space="preserve">
+    <value>未選擇資料夾</value>
+  </data>
+  <data name="Status_NoFilesToIndex" xml:space="preserve">
+    <value>沒有要索引的檔案</value>
+  </data>
+  <data name="Status_AllFilesIndexed" xml:space="preserve">
+    <value>所有檔案已索引 ({0} 個檔案)</value>
+  </data>
+  <data name="Status_AutoIndexing" xml:space="preserve">
+    <value>自動索引 {0} 個檔案中...</value>
+  </data>
+  <data name="Status_ReIndexing" xml:space="preserve">
+    <value>重新索引 {0} ({1}/{2})...</value>
+  </data>
+  <data name="Status_ReIndexed" xml:space="preserve">
+    <value>已重新索引 {0} 個檔案</value>
+  </data>
+  <data name="Status_StartingIndexing" xml:space="preserve">
+    <value>開始索引中...</value>
+  </data>
+  <data name="Status_IndexingCompleted" xml:space="preserve">
+    <value>索引完成！</value>
+  </data>
+  <data name="Status_ReIndexingSingle" xml:space="preserve">
+    <value>重新索引 {0}...</value>
+  </data>
+  <data name="Status_SuccessfullyReIndexed" xml:space="preserve">
+    <value>成功重新索引 {0} ({1} 字元)</value>
+  </data>
+  <data name="Status_ReIndexedNoText" xml:space="preserve">
+    <value>已重新索引 {0} (未提取文字)</value>
+  </data>
+  <data name="Status_SuccessfullyReIndexedSimple" xml:space="preserve">
+    <value>成功重新索引 {0}</value>
+  </data>
+  <data name="Animation_Thinking" xml:space="preserve">
+    <value>思考中</value>
+  </data>
+  <data name="Animation_Planning" xml:space="preserve">
+    <value>規劃中</value>
+  </data>
+  <data name="Animation_GeneratingResponse" xml:space="preserve">
+    <value>生成回應中</value>
+  </data>
+  <data name="Placeholder_SendMessage" xml:space="preserve">
+    <value>輸入訊息</value>
+  </data>
+</root>
+
+

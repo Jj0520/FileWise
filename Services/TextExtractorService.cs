@@ -14,20 +14,23 @@ using Ghostscript.NET;
 using Ghostscript.NET.Rasterizer;
 using System.Drawing;
 using System.Drawing.Imaging;
+using FileWise.Utilities;
 
 namespace FileWise.Services;
 
 public class TextExtractorService
 {
     private readonly IConfiguration? _configuration;
+    private readonly UserSettingsService? _userSettingsService;
     private readonly HttpClient _httpClient;
     private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     private const string GeminiFileApiUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files";
     private const long FileSizeThreshold = 20 * 1024 * 1024; // 20MB threshold
     
-    public TextExtractorService(IConfiguration? configuration = null)
+    public TextExtractorService(IConfiguration? configuration = null, UserSettingsService? userSettingsService = null)
     {
         _configuration = configuration;
+        _userSettingsService = userSettingsService;
         _httpClient = new HttpClient();
         _httpClient.Timeout = TimeSpan.FromMinutes(10); // Longer timeout for PDF processing via Gemini API
     }
@@ -214,13 +217,34 @@ public class TextExtractorService
                 }
                 Console.WriteLine($"  ✓ Found eng.traineddata ({new FileInfo(engDataPath).Length / 1024 / 1024} MB)");
                 
+                // Determine OCR language based on settings
+                string ocrLanguage = "eng";
+                bool enableTraditionalChinese = _userSettingsService?.EnableTraditionalChinese ?? false;
+                
+                if (enableTraditionalChinese)
+                {
+                    var chiTraDataPath = Path.Combine(tessdataPath, "chi_tra.traineddata");
+                    if (File.Exists(chiTraDataPath))
+                    {
+                        ocrLanguage = "eng+chi_tra";
+                        Console.WriteLine($"  ✓ Found chi_tra.traineddata ({new FileInfo(chiTraDataPath).Length / 1024 / 1024} MB)");
+                        Console.WriteLine($"  🌏 Using OCR languages: English + Traditional Chinese");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  ⚠️ Traditional Chinese enabled but chi_tra.traineddata not found at: {chiTraDataPath}");
+                        Console.WriteLine($"  💡 Please download chi_tra.traineddata from https://github.com/tesseract-ocr/tessdata");
+                        Console.WriteLine($"  📝 Using English only for OCR");
+                    }
+                }
+                
                 // Initialize Tesseract engine once for all pages
-                Console.WriteLine($"  🔧 Initializing Tesseract engine...");
+                Console.WriteLine($"  🔧 Initializing Tesseract engine with language: {ocrLanguage}...");
                 TesseractEngine? engine = null;
                 try
                 {
-                    engine = new TesseractEngine(tessdataPath, "eng", EngineMode.Default);
-                    Console.WriteLine($"  ✓ Tesseract engine initialized");
+                    engine = new TesseractEngine(tessdataPath, ocrLanguage, EngineMode.Default);
+                    Console.WriteLine($"  ✓ Tesseract engine initialized with language: {ocrLanguage}");
                 }
                 catch (Exception engineEx)
                 {

@@ -46,7 +46,7 @@ public partial class MainViewModel : ViewModelBase
     private double _indexingProgress;
 
     [ObservableProperty]
-    private string _indexingStatus = "Ready";
+    private string _indexingStatus = LocalizationService.Instance.GetString("Status_Ready");
 
     [ObservableProperty]
     private string _userQuery = string.Empty;
@@ -105,6 +105,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<FileMetadata> _selectedFilesForReindex = new();
 
+    [ObservableProperty]
+    private ObservableCollection<string> _recentFolders = new();
+
     private CollectionViewSource _filesViewSource = new();
 
     public ICollectionView FilesView => _filesViewSource.View;
@@ -133,6 +136,9 @@ public partial class MainViewModel : ViewModelBase
         // Load saved folder path
         SelectedFolder = _userSettingsService.SelectedFolder;
 
+        // Load recent folders
+        LoadRecentFolders();
+
         // Load chat tabs
         LoadChatTabs();
 
@@ -140,7 +146,7 @@ public partial class MainViewModel : ViewModelBase
         _ = LoadIndexedFilesAsync();
         
         // Initialize status
-        IndexingStatus = "Ready";
+        IndexingStatus = LocalizationService.Instance.GetString("Status_Ready");
         IndexingProgress = 0;
     }
 
@@ -163,7 +169,7 @@ public partial class MainViewModel : ViewModelBase
     {
         // Reset progress when folder changes
         IndexingProgress = 0;
-        IndexingStatus = "Checking files...";
+        IndexingStatus = LocalizationService.Instance.GetString("Status_CheckingFiles");
         
         // Reload files when folder changes to show only files from the new directory
         _ = LoadIndexedFilesAsync();
@@ -172,11 +178,14 @@ public partial class MainViewModel : ViewModelBase
         // Automatically start indexing when a folder is selected
         if (!string.IsNullOrEmpty(value) && Directory.Exists(value))
         {
+            // Add to recent folders
+            _userSettingsService.AddRecentFolder(value);
+            LoadRecentFolders();
             _ = AutoIndexFolderAsync();
         }
         else
         {
-            IndexingStatus = "No folder selected";
+            IndexingStatus = LocalizationService.Instance.GetString("Status_NoFolderSelected");
         }
     }
 
@@ -185,7 +194,7 @@ public partial class MainViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedFolder) || !Directory.Exists(SelectedFolder))
         {
             IndexingProgress = 0;
-            IndexingStatus = "No folder selected";
+            IndexingStatus = LocalizationService.Instance.GetString("Status_NoFolderSelected");
             return;
         }
 
@@ -195,14 +204,84 @@ public partial class MainViewModel : ViewModelBase
 
         // Check if there are files that need indexing
         var supportedExtensions = new[] { ".txt", ".pdf", ".docx", ".xlsx", ".csv" };
-        var filesInDirectory = Directory.GetFiles(SelectedFolder, "*.*", SearchOption.AllDirectories)
+        
+        // Check if it's a network path
+        bool isNetworkPath = SelectedFolder.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase);
+        
+        // For network paths, we need to handle them differently
+        List<string> filesInDirectory;
+        try
+        {
+            if (isNetworkPath)
+            {
+                // For network paths, use a safer approach - let the indexer handle it
+                // We'll just check if the folder exists and start indexing
+                if (!Directory.Exists(SelectedFolder))
+                {
+                    IndexingStatus = "Network folder not accessible";
+                    return;
+                }
+                // Don't pre-scan network folders - let the indexer do it with proper error handling
+                filesInDirectory = new List<string>(); // Will be populated by the indexer
+            }
+            else
+            {
+                filesInDirectory = Directory.GetFiles(SelectedFolder, "*.*", SearchOption.AllDirectories)
             .Where(f => supportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
             .ToList();
-
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error scanning folder: {ex.Message}");
+            IndexingStatus = $"Error scanning folder: {ex.Message}";
+            return;
+        }
+        
+        if (isNetworkPath)
+        {
+            // For network paths, just start indexing - let the indexer handle file discovery
+            IsIndexing = true;
+            IndexingProgress = 0;
+            IndexingStatus = "Scanning network folder...";
+            
+            try
+            {
+                await _fileIndexerService.IndexFolderAsync(SelectedFolder, 
+                    progress => 
+                    {
+                        IndexingProgress = progress;
+                        System.Diagnostics.Debug.WriteLine($"Progress: {progress}%");
+                    },
+                    status => 
+                    {
+                        IndexingStatus = status;
+                        System.Diagnostics.Debug.WriteLine($"Status: {status}");
+                    });
+                
+                IndexingProgress = 100;
+                IndexingStatus = LocalizationService.Instance.GetString("Status_IndexingCompleted");
+                await LoadIndexedFilesAsync();
+                await CheckReindexingNeededAsync();
+            }
+            catch (Exception ex)
+            {
+                IndexingStatus = $"Error: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Auto-indexing error: {ex.Message}");
+                Console.WriteLine($"❌ Auto-indexing error: {ex.Message}");
+            }
+            finally
+            {
+                IsIndexing = false;
+            }
+        }
+        else
+        {
+            // For local paths, use the existing logic
         if (!filesInDirectory.Any())
         {
             IndexingProgress = 100;
-            IndexingStatus = "No files to index";
+                IndexingStatus = LocalizationService.Instance.GetString("Status_NoFilesToIndex");
             return;
         }
 
@@ -235,23 +314,27 @@ public partial class MainViewModel : ViewModelBase
         if (!filesNeedingIndex.Any())
         {
             IndexingProgress = 100;
-            IndexingStatus = $"All files indexed ({filesInDirectory.Count} files)";
+                IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_AllFilesIndexed"), filesInDirectory.Count);
             return;
         }
 
-        // Auto-index new/modified files
+        // Auto-index only new/modified files
         IsIndexing = true;
         IndexingProgress = 0;
-        IndexingStatus = $"Auto-indexing {filesNeedingIndex.Count} file(s)...";
+            IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_AutoIndexing"), filesNeedingIndex.Count);
 
         try
         {
-            await _fileIndexerService.IndexFolderAsync(SelectedFolder, 
-                progress => IndexingProgress = progress,
-                status => IndexingStatus = status);
+            // Only index files that need indexing (new or modified)
+            if (filesNeedingIndex.Any())
+            {
+                await _fileIndexerService.IndexFilesAsync(filesNeedingIndex, 
+                    progress => IndexingProgress = progress,
+                    status => IndexingStatus = status);
+            }
             
             IndexingProgress = 100;
-            IndexingStatus = $"Indexing completed! ({filesInDirectory.Count} files indexed)";
+                IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_AllFilesIndexed"), filesInDirectory.Count);
             await LoadIndexedFilesAsync();
             await CheckReindexingNeededAsync();
         }
@@ -263,6 +346,7 @@ public partial class MainViewModel : ViewModelBase
         finally
         {
             IsIndexing = false;
+            }
         }
     }
 
@@ -537,7 +621,7 @@ public partial class MainViewModel : ViewModelBase
                     continue;
                 }
 
-                IndexingStatus = $"Re-indexing {file.FileName} ({processed + 1}/{totalFiles})...";
+                IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_ReIndexing"), file.FileName, processed + 1, totalFiles);
                 Console.WriteLine($"Re-indexing file: {file.FileName}");
                 System.Diagnostics.Debug.WriteLine($"Re-indexing file: {file.FileName}");
 
@@ -560,7 +644,7 @@ public partial class MainViewModel : ViewModelBase
             SelectedFilesForReindex.Clear();
             IsSelectionMode = false;
 
-            IndexingStatus = $"Re-indexed {processed} file(s)";
+            IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_ReIndexed"), processed);
             MessageBox.Show($"Successfully re-indexed {processed} file(s).", "Re-indexing Complete",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -593,7 +677,7 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            IndexingStatus = $"Re-indexing {file.FileName}...";
+            IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_ReIndexingSingle"), file.FileName);
             Console.WriteLine($"Re-indexing file: {file.FileName}");
             System.Diagnostics.Debug.WriteLine($"Re-indexing file: {file.FileName}");
             await _fileIndexerService.IndexFileAsync(file.FilePath, 
@@ -613,20 +697,20 @@ public partial class MainViewModel : ViewModelBase
                 
                 if (contentLength > 0)
                 {
-                    IndexingStatus = $"Successfully re-indexed {file.FileName} ({contentLength} chars)";
+                    IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_SuccessfullyReIndexed"), file.FileName, contentLength);
                     MessageBox.Show($"Successfully re-indexed {file.FileName}\n\nExtracted {contentLength} characters.", "Success", 
                         MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    IndexingStatus = $"Re-indexed {file.FileName} (no text extracted)";
+                    IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_ReIndexedNoText"), file.FileName);
                     MessageBox.Show($"Re-indexed {file.FileName}, but no text was extracted.\n\nThis may be a scanned/image-based PDF that needs OCR processing.", "Warning", 
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
             else
             {
-                IndexingStatus = $"Successfully re-indexed {file.FileName}";
+                IndexingStatus = string.Format(LocalizationService.Instance.GetString("Status_SuccessfullyReIndexedSimple"), file.FileName);
                 MessageBox.Show($"Successfully re-indexed {file.FileName}", "Success", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -668,7 +752,7 @@ public partial class MainViewModel : ViewModelBase
 
         IsIndexing = true;
         IndexingProgress = 0;
-        IndexingStatus = "Starting indexing...";
+        IndexingStatus = LocalizationService.Instance.GetString("Status_StartingIndexing");
 
         try
         {
@@ -676,7 +760,7 @@ public partial class MainViewModel : ViewModelBase
                 progress => IndexingProgress = progress,
                 status => IndexingStatus = status);
             
-            IndexingStatus = "Indexing completed!";
+            IndexingStatus = LocalizationService.Instance.GetString("Status_IndexingCompleted");
             await LoadIndexedFilesAsync();
             await CheckReindexingNeededAsync();
             MessageBox.Show("Files indexed successfully!", "Success", 
@@ -704,6 +788,43 @@ public partial class MainViewModel : ViewModelBase
     private void TogglePrimarySidebar()
     {
         IsPrimarySidebarVisible = !IsPrimarySidebarVisible;
+    }
+
+    [RelayCommand]
+    private void SelectRecentFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return;
+
+        SelectedFolder = folderPath;
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            var mainWindow = System.Windows.Application.Current.MainWindow;
+            if (mainWindow != null)
+            {
+                // Use reflection to call OpenSettingsWindow method
+                var method = mainWindow.GetType().GetMethod("OpenSettingsWindow");
+                method?.Invoke(mainWindow, null);
+            }
+        });
+    }
+
+    private void LoadRecentFolders()
+    {
+        RecentFolders.Clear();
+        var recentFolders = _userSettingsService.RecentFolders;
+        foreach (var folder in recentFolders)
+        {
+            if (Directory.Exists(folder))
+            {
+                RecentFolders.Add(folder);
+            }
+        }
     }
 
     [RelayCommand]
@@ -873,6 +994,49 @@ public partial class MainViewModel : ViewModelBase
                 string response = string.Empty;
                 List<SearchResult> searchResults = new();
 
+                // Check for IT Tools query first - return path directly without API calls
+                var lowerQuery = query.ToLower();
+                var itToolsKeywords = new[] { "it tools", "it user tools", "it technology tools", "user tools",
+                    "directory to it tools", "it tools path", "it tools directory",
+                    "where is it tools", "it tools location", "it tools folder",
+                    "new user setup", "user setup", "setup", "new user", "user setup tools",
+                    "IT工具", "IT用户工具", "IT技术工具", "用户工具", "IT工具路径", "IT工具目录",
+                    "IT工具在哪里", "IT工具位置", "IT工具文件夹", "新用户设置", "用户设置", "设置" };
+                
+                if (itToolsKeywords.Any(keyword => lowerQuery.Contains(keyword)))
+                {
+                    response = "The IT User tools directory is located at:\n\n" +
+                              "\\\\10.0.42.100\\Public area\\IT Technology\\User tools\n\n" +
+                              "You can access this network path directly to find IT tools and utilities.";
+                    
+                    // Add user message
+                    if (SelectedChatTab != null)
+                    {
+                        SelectedChatTab.Messages.Add(new ChatMessage
+                        {
+                            Content = query,
+                            IsUser = true,
+                            Timestamp = DateTime.Now
+                        });
+                    }
+
+                    // Add AI response
+                    if (SelectedChatTab != null)
+                    {
+                        SelectedChatTab.Messages.Add(new ChatMessage
+                        {
+                            Content = response,
+                            IsUser = false,
+                            Timestamp = DateTime.Now
+                        });
+                    }
+
+                    SaveCurrentTab();
+                    UpdateChatMessages();
+                    IsProcessingQuery = false;
+                    return;
+                }
+
                 try
                 {
                     if (isSearchQuery)
@@ -957,6 +1121,26 @@ public partial class MainViewModel : ViewModelBase
                     else
                     {
                         // Handle casual conversation without searching
+                        // Clear any previous search results for casual conversations
+                        try
+                        {
+                            if (System.Windows.Application.Current?.Dispatcher != null && !System.Windows.Application.Current.Dispatcher.CheckAccess())
+                            {
+                                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    SearchResults.Clear();
+                                });
+                            }
+                            else
+                            {
+                                SearchResults.Clear();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error clearing search results: {ex.Message}");
+                        }
+                        
                         // Pass conversation history excluding the current user message (which we just added)
                         List<ChatMessage> history = new List<ChatMessage>();
                         try
